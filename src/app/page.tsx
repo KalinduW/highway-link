@@ -1,65 +1,162 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+export default function HomePage() {
+	const router = useRouter();
+	const [search, setSearch] = useState({
+		origin: "",
+		destination: "",
+		date: "",
+	});
+
+	const handleSearch = (e: React.FormEvent) => {
+		e.preventDefault();
+		router.push(
+			`/buses?origin=${search.origin}&destination=${search.destination}&date=${search.date}`
+		);
+	};
+
+	return (
+		<div className="min-h-screen bg-white">
+			{/* Navbar */}
+			<nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
+				<h1 className="text-2xl font-bold text-blue-600">HighwayLink</h1>
+				<div className="flex gap-4">
+					<Link
+						href="/login"
+						className="text-blue-600 border border-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition"
+					>
+						Login
+					</Link>
+					<Link
+						href="/register"
+						className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+					>
+						Register
+					</Link>
+				</div>
+			</nav>
+
+			{/* Hero Section */}
+			<div className="bg-blue-600 text-white py-20 px-6 text-center">
+				<h2 className="text-4xl font-bold mb-4">
+					Travel Smarter on Sri Lanka's Highways
+				</h2>
+				<p className="text-blue-100 text-lg mb-10">
+					Book seats, track buses in real time, and travel with confidence.
+				</p>
+
+				{/* Search Form */}
+				<div className="max-w-3xl mx-auto bg-white rounded-xl p-6 shadow-lg">
+					<form
+						onSubmit={handleSearch}
+						className="flex flex-col md:flex-row gap-4"
+					>
+						<div className="flex-1">
+							<label className="block text-sm font-medium text-gray-700 mb-1 text-left">
+								From
+							</label>
+							<input
+								type="text"
+								value={search.origin}
+								onChange={(e) =>
+									setSearch({ ...search, origin: e.target.value })
+								}
+								required
+								placeholder="e.g. Colombo"
+								className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+							/>
+						</div>
+
+						<div className="flex-1">
+							<label className="block text-sm font-medium text-gray-700 mb-1 text-left">
+								To
+							</label>
+							<input
+								type="text"
+								value={search.destination}
+								onChange={(e) =>
+									setSearch({ ...search, destination: e.target.value })
+								}
+								required
+								placeholder="e.g. Matara"
+								className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+							/>
+						</div>
+
+						<div className="flex-1">
+							<label className="block text-sm font-medium text-gray-700 mb-1 text-left">
+								Date
+							</label>
+							<input
+								type="date"
+								value={search.date}
+								onChange={(e) => setSearch({ ...search, date: e.target.value })}
+								required
+								className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+							/>
+						</div>
+
+						<div className="flex items-end">
+							<button
+								type="submit"
+								className="w-full bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
+							>
+								Search
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+
+			{/* Features Section */}
+			<div className="py-16 px-6 max-w-5xl mx-auto">
+				<h3 className="text-2xl font-bold text-center text-gray-800 mb-10">
+					Why Choose HighwayLink?
+				</h3>
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+					<div className="text-center p-6 bg-blue-50 rounded-xl">
+						<div className="text-4xl mb-4">🎫</div>
+						<h4 className="text-lg font-semibold text-gray-800 mb-2">
+							Easy Booking
+						</h4>
+						<p className="text-gray-600 text-sm">
+							Book your seat online in minutes. Choose your preferred seat and
+							get a QR-coded digital ticket instantly.
+						</p>
+					</div>
+
+					<div className="text-center p-6 bg-blue-50 rounded-xl">
+						<div className="text-4xl mb-4">📍</div>
+						<h4 className="text-lg font-semibold text-gray-800 mb-2">
+							Real-Time Tracking
+						</h4>
+						<p className="text-gray-600 text-sm">
+							Track your bus live on the map. Know exactly when your bus will
+							arrive and plan your journey better.
+						</p>
+					</div>
+
+					<div className="text-center p-6 bg-blue-50 rounded-xl">
+						<div className="text-4xl mb-4">📱</div>
+						<h4 className="text-lg font-semibold text-gray-800 mb-2">
+							SMS Notifications
+						</h4>
+						<p className="text-gray-600 text-sm">
+							Receive instant SMS alerts for booking confirmations, schedule
+							changes, and boarding reminders.
+						</p>
+					</div>
+				</div>
+			</div>
+
+			{/* Footer */}
+			<footer className="bg-gray-800 text-white text-center py-6 text-sm">
+				<p>© 2025 HighwayLink. Smart Highway Bus Management System.</p>
+			</footer>
+		</div>
+	);
 }
