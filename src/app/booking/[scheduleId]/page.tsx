@@ -1,5 +1,6 @@
 "use client";
 
+import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -153,12 +154,18 @@ export default function BookingPage() {
 					<div className="bg-green-50 text-green-600 p-6 rounded-xl mb-6 text-center">
 						<p className="text-xl font-bold mb-2">{success}</p>
 						<p className="text-sm text-gray-600 mb-4">Your QR Code:</p>
-						<div className="bg-white border border-gray-200 rounded-lg p-4 font-mono text-sm break-all">
-							{qrCode}
+						<div className="bg-white border border-gray-200 rounded-lg p-6 flex justify-center">
+							<QRCodeSVG value={qrCode} size={200} />
 						</div>
 						<p className="text-xs text-gray-500 mt-3">
-							Save this code — you'll need it for boarding
+							Show this QR code to the conductor during boarding
 						</p>
+						<button
+							onClick={() => window.print()}
+							className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-green-700 transition"
+						>
+							Print Ticket
+						</button>
 					</div>
 				)}
 

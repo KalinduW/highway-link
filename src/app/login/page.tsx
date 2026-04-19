@@ -31,6 +31,10 @@ export default function LoginPage() {
 			if (!res.ok) {
 				setError(data.error || "Login failed");
 			} else {
+				// Store user info
+				localStorage.setItem("userEmail", data.user.email);
+				localStorage.setItem("userName", data.user.fullName);
+
 				// Redirect based on role
 				const role = data.user.role;
 				if (role === "admin" || role === "bus_owner") {
