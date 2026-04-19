@@ -188,7 +188,7 @@ export default function PassengerDashboard() {
 													{booking.bookingStatus.toUpperCase()}
 												</span>
 											</div>
-											<div className="flex gap-2">
+											<div className="flex gap-2 flex-wrap">
 												<Button
 													variant="outline"
 													size="sm"
@@ -204,6 +204,32 @@ export default function PassengerDashboard() {
 														? "Hide QR"
 														: "Show QR"}
 												</Button>
+												{booking.bookingStatus !== "cancelled" && (
+													<>
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() =>
+																router.push(
+																	`/dashboard/passenger/reschedule?bookingId=${booking.id}`
+																)
+															}
+														>
+															Reschedule
+														</Button>
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() =>
+																router.push(
+																	`/booking/${booking.scheduleId}?bookingId=${booking.id}&changeSeat=true`
+																)
+															}
+														>
+															Change Seat
+														</Button>
+													</>
+												)}
 											</div>
 										</div>
 
