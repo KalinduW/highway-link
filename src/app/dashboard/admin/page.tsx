@@ -1,7 +1,19 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+
+interface User {
+	id: string;
+	fullName: string;
+	email: string;
+	phone: string;
+	nic: string;
+	role: string;
+	createdAt: string;
+}
 
 export default function AdminDashboard() {
 	const [activeTab, setActiveTab] = useState("overview");
@@ -18,6 +30,7 @@ export default function AdminDashboard() {
 						{ id: "routes", label: "🗺️ Routes" },
 						{ id: "schedules", label: "📅 Schedules" },
 						{ id: "users", label: "👥 Users" },
+						{ id: "reports", label: "💰 Reports" },
 					].map((item) => (
 						<button
 							key={item.id}
@@ -46,9 +59,18 @@ export default function AdminDashboard() {
 				{activeTab === "routes" && <RoutesTab />}
 				{activeTab === "schedules" && <SchedulesTab />}
 				{activeTab === "users" && <UsersTab />}
+				{activeTab === "reports" && <ReportsRedirect />}
 			</div>
 		</div>
 	);
+}
+
+function ReportsRedirect() {
+	const router = useRouter();
+	useEffect(() => {
+		router.push("/dashboard/admin/reports");
+	}, []);
+	return <p className="text-gray-500">Loading reports...</p>;
 }
 
 function Overview() {
@@ -443,12 +465,234 @@ function SchedulesTab() {
 }
 
 function UsersTab() {
+	const [users, setUsers] = useState<User[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [message, setMessage] = useState("");
+	const [searchTerm, setSearchTerm] = useState("");
+	const [filterRole, setFilterRole] = useState("all");
+
+	useEffect(() => {
+		fetchUsers();
+	}, []);
+
+	const fetchUsers = async () => {
+		try {
+			const res = await fetch("/api/admin/users");
+			const data = await res.json();
+			if (res.ok) setUsers(data.users);
+		} catch {
+			console.error("Failed to fetch users");
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleRoleChange = async (userId: string, newRole: string) => {
+		try {
+			const res = await fetch("/api/admin/users", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ userId, role: newRole }),
+			});
+			if (res.ok) {
+				setMessage("Role updated successfully!");
+				fetchUsers();
+				setTimeout(() => setMessage(""), 3000);
+			}
+		} catch {
+			setMessage("Failed to update role");
+		}
+	};
+
+	const handleDeactivate = async (userId: string) => {
+		if (!confirm("Are you sure you want to deactivate this user?")) return;
+		try {
+			const res = await fetch(`/api/admin/users?userId=${userId}`, {
+				method: "DELETE",
+			});
+			if (res.ok) {
+				setMessage("User deactivated successfully!");
+				fetchUsers();
+				setTimeout(() => setMessage(""), 3000);
+			}
+		} catch {
+			setMessage("Failed to deactivate user");
+		}
+	};
+
+	const filteredUsers = users.filter((user) => {
+		const matchesSearch =
+			user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			user.email.toLowerCase().includes(searchTerm.toLowerCase());
+		const matchesRole = filterRole === "all" || user.role === filterRole;
+		return matchesSearch && matchesRole;
+	});
+
+	const getRoleBadgeColor = (role: string) => {
+		switch (role) {
+			case "admin":
+				return "bg-red-100 text-red-700";
+			case "bus_owner":
+				return "bg-purple-100 text-purple-700";
+			case "conductor":
+				return "bg-blue-100 text-blue-700";
+			case "driver":
+				return "bg-yellow-100 text-yellow-700";
+			default:
+				return "bg-green-100 text-green-700";
+		}
+	};
+
 	return (
 		<div>
 			<h2 className="text-2xl font-bold text-gray-800 mb-6">Manage Users</h2>
-			<div className="bg-white rounded-xl shadow-sm p-6">
-				<p className="text-gray-500">User management coming soon.</p>
+
+			{message && (
+				<div
+					className={`p-3 rounded-lg mb-4 text-sm ${
+						message.includes("success")
+							? "bg-green-50 text-green-600"
+							: "bg-red-50 text-red-600"
+					}`}
+				>
+					{message}
+				</div>
+			)}
+
+			{/* Search & Filter */}
+			<div className="flex gap-4 mb-6">
+				<input
+					type="text"
+					placeholder="Search by name or email..."
+					value={searchTerm}
+					onChange={(e) => setSearchTerm(e.target.value)}
+					className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+				/>
+				<select
+					value={filterRole}
+					onChange={(e) => setFilterRole(e.target.value)}
+					className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+				>
+					<option value="all">All Roles</option>
+					<option value="passenger">Passenger</option>
+					<option value="conductor">Conductor</option>
+					<option value="driver">Driver</option>
+					<option value="bus_owner">Bus Owner</option>
+					<option value="admin">Admin</option>
+				</select>
 			</div>
+
+			{/* Stats */}
+			<div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+				{["passenger", "conductor", "driver", "bus_owner", "admin"].map(
+					(role) => (
+						<div
+							key={role}
+							className="bg-white rounded-lg border p-3 text-center"
+						>
+							<p className="text-xl font-bold text-gray-800">
+								{users.filter((u) => u.role === role).length}
+							</p>
+							<p className="text-xs text-gray-500 capitalize">
+								{role.replace("_", " ")}
+							</p>
+						</div>
+					)
+				)}
+			</div>
+
+			{loading && (
+				<p className="text-center text-gray-500 py-10">Loading users...</p>
+			)}
+
+			{/* Users Table */}
+			{!loading && (
+				<div className="bg-white rounded-xl shadow-sm overflow-hidden">
+					<div className="overflow-x-auto">
+						<table className="w-full text-sm">
+							<thead className="bg-gray-50 border-b">
+								<tr>
+									<th className="text-left px-4 py-3 text-gray-600 font-semibold">
+										Name
+									</th>
+									<th className="text-left px-4 py-3 text-gray-600 font-semibold">
+										Email
+									</th>
+									<th className="text-left px-4 py-3 text-gray-600 font-semibold">
+										Phone
+									</th>
+									<th className="text-left px-4 py-3 text-gray-600 font-semibold">
+										Role
+									</th>
+									<th className="text-left px-4 py-3 text-gray-600 font-semibold">
+										Joined
+									</th>
+									<th className="text-left px-4 py-3 text-gray-600 font-semibold">
+										Actions
+									</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-gray-100">
+								{filteredUsers.length === 0 && (
+									<tr>
+										<td colSpan={6} className="text-center py-10 text-gray-500">
+											No users found
+										</td>
+									</tr>
+								)}
+								{filteredUsers.map((user) => (
+									<tr key={user.id} className="hover:bg-gray-50 transition">
+										<td className="px-4 py-3 font-medium text-gray-800">
+											{user.fullName}
+										</td>
+										<td className="px-4 py-3 text-gray-600">{user.email}</td>
+										<td className="px-4 py-3 text-gray-600">{user.phone}</td>
+										<td className="px-4 py-3">
+											<span
+												className={`text-xs font-semibold px-2 py-1 rounded-full ${getRoleBadgeColor(
+													user.role
+												)}`}
+											>
+												{user.role.replace("_", " ").toUpperCase()}
+											</span>
+										</td>
+										<td className="px-4 py-3 text-gray-500">
+											{new Date(user.createdAt).toLocaleDateString("en-US", {
+												year: "numeric",
+												month: "short",
+												day: "numeric",
+											})}
+										</td>
+										<td className="px-4 py-3">
+											<div className="flex gap-2">
+												<select
+													value={user.role}
+													onChange={(e) =>
+														handleRoleChange(user.id, e.target.value)
+													}
+													className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+												>
+													<option value="passenger">Passenger</option>
+													<option value="conductor">Conductor</option>
+													<option value="driver">Driver</option>
+													<option value="bus_owner">Bus Owner</option>
+													<option value="admin">Admin</option>
+												</select>
+												<button
+													onClick={() => handleDeactivate(user.id)}
+													className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 transition"
+												>
+													Deactivate
+												</button>
+											</div>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

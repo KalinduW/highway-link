@@ -47,6 +47,29 @@ export default function PassengerDashboard() {
 		} finally {
 			setLoading(false);
 		}
+  };
+  
+  const handleCancel = async (bookingId: string) => {
+		if (!confirm("Are you sure you want to cancel this booking?")) return;
+
+		try {
+			const res = await fetch("/api/passenger/cancel", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ bookingId }),
+			});
+
+			const data = await res.json();
+
+			if (!res.ok) {
+				alert(data.error || "Failed to cancel booking");
+			} else {
+				alert("Booking cancelled successfully");
+				fetchBookings(email);
+			}
+		} catch {
+			alert("Something went wrong");
+		}
 	};
 
 	const getStatusColor = (status: string) => {
@@ -227,6 +250,13 @@ export default function PassengerDashboard() {
 															}
 														>
 															Change Seat
+														</Button>
+														<Button
+															variant="destructive"
+															size="sm"
+															onClick={() => handleCancel(booking.id)}
+														>
+															Cancel
 														</Button>
 													</>
 												)}
