@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function LoginPage() {
 	const router = useRouter();
@@ -31,16 +35,16 @@ export default function LoginPage() {
 			if (!res.ok) {
 				setError(data.error || "Login failed");
 			} else {
-				// Store user info
 				localStorage.setItem("userEmail", data.user.email);
 				localStorage.setItem("userName", data.user.fullName);
 
-				// Redirect based on role
 				const role = data.user.role;
 				if (role === "admin" || role === "bus_owner") {
 					router.push("/dashboard/admin");
 				} else if (role === "conductor") {
 					router.push("/dashboard/conductor");
+				} else if (role === "driver") {
+					router.push("/dashboard/driver");
 				} else {
 					router.push("/dashboard/passenger");
 				}
@@ -53,65 +57,119 @@ export default function LoginPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-			<div className="max-w-md w-full bg-white rounded-xl shadow-md p-8">
-				<h2 className="text-3xl font-bold text-center text-blue-600 mb-2">
-					HighwayLink
-				</h2>
-				<p className="text-center text-gray-500 mb-6">Login to your account</p>
+		<div className="min-h-screen bg-gray-50 flex flex-col">
+			{/* Navbar */}
+			<nav className="bg-white border-b px-8 py-4 flex justify-between items-center">
+				<Link href="/" className="flex items-center gap-2">
+					<span className="text-2xl">🚌</span>
+					<span className="text-xl font-bold text-blue-600">HighwayLink</span>
+				</Link>
+				<Link href="/register">
+					<Button variant="outline" size="sm" className="rounded-full px-5">
+						Create Account
+					</Button>
+				</Link>
+			</nav>
 
-				{error && (
-					<div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-						{error}
-					</div>
-				)}
-
-				<form onSubmit={handleSubmit} className="space-y-4">
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Email Address
-						</label>
-						<input
-							type="email"
-							name="email"
-							value={formData.email}
-							onChange={handleChange}
-							required
-							className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-							placeholder="Enter your email"
-						/>
-					</div>
-
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Password
-						</label>
-						<input
-							type="password"
-							name="password"
-							value={formData.password}
-							onChange={handleChange}
-							required
-							className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-							placeholder="Enter your password"
-						/>
+			{/* Main */}
+			<div className="flex-1 flex items-center justify-center px-4 py-12">
+				<div className="w-full max-w-md">
+					{/* Header */}
+					<div className="text-center mb-8">
+						<div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
+							🔐
+						</div>
+						<h1 className="text-3xl font-extrabold text-gray-800 mb-2">
+							Welcome back
+						</h1>
+						<p className="text-gray-500">Login to manage your bookings</p>
 					</div>
 
-					<button
-						type="submit"
-						disabled={loading}
-						className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
-					>
-						{loading ? "Logging in..." : "Login"}
-					</button>
-				</form>
+					<Card className="shadow-lg border-0">
+						<CardContent className="p-8">
+							{error && (
+								<div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-xl mb-6 text-sm flex items-center gap-2">
+									<span>⚠️</span> {error}
+								</div>
+							)}
 
-				<p className="text-center text-sm text-gray-500 mt-4">
-					Don't have an account?{" "}
-					<Link href="/register" className="text-blue-600 hover:underline">
-						Register here
-					</Link>
-				</p>
+							<form onSubmit={handleSubmit} className="space-y-5">
+								<div>
+									<Label className="text-gray-700 font-medium mb-1.5 block">
+										Email Address
+									</Label>
+									<Input
+										type="email"
+										name="email"
+										value={formData.email}
+										onChange={handleChange}
+										required
+										placeholder="Enter your email"
+										className="h-11"
+									/>
+								</div>
+
+								<div>
+									<div className="flex justify-between items-center mb-1.5">
+										<Label className="text-gray-700 font-medium">
+											Password
+										</Label>
+									</div>
+									<Input
+										type="password"
+										name="password"
+										value={formData.password}
+										onChange={handleChange}
+										required
+										placeholder="Enter your password"
+										className="h-11"
+									/>
+								</div>
+
+								<Button
+									type="submit"
+									disabled={loading}
+									className="w-full h-11 text-base font-semibold rounded-xl"
+								>
+									{loading ? "Logging in..." : "Login →"}
+								</Button>
+							</form>
+
+							<div className="mt-6 pt-6 border-t border-gray-100 text-center">
+								<p className="text-gray-500 text-sm">
+									Don't have an account?{" "}
+									<Link
+										href="/register"
+										className="text-blue-600 font-semibold hover:underline"
+									>
+										Register here
+									</Link>
+								</p>
+							</div>
+						</CardContent>
+					</Card>
+
+					{/* Role Info */}
+					<div className="mt-6 grid grid-cols-2 gap-3">
+						{[
+							{ icon: "👤", label: "Passenger", desc: "Book & track trips" },
+							{ icon: "🚌", label: "Bus Owner", desc: "Manage your fleet" },
+							{ icon: "🎫", label: "Conductor", desc: "Verify tickets" },
+							{ icon: "🚗", label: "Driver", desc: "View your trips" },
+						].map((role) => (
+							<div
+								key={role.label}
+								className="bg-white border border-gray-100 rounded-xl p-3 text-center"
+							>
+								<p className="text-lg mb-0.5">{role.icon}</p>
+								<p className="text-xs font-semibold text-gray-700">
+									{role.label}
+								</p>
+								<p className="text-xs text-gray-400">{role.desc}</p>
+							</div>
+						))}
+					</div>
+				</div>
 			</div>
 		</div>
 	);

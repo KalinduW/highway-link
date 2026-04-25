@@ -84,6 +84,7 @@ export const buses = pgTable("buses", {
 	licensePlate: text("license_plate").notNull().unique(),
 	busType: busTypeEnum("bus_type").notNull(),
 	totalSeats: integer("total_seats").notNull(),
+	totalMileage: integer("total_mileage").notNull().default(0),
 	createdAt: timestamp("created_at").defaultNow(),
 });
 

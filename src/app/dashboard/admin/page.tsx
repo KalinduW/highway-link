@@ -31,6 +31,8 @@ export default function AdminDashboard() {
 						{ id: "schedules", label: "📅 Schedules" },
 						{ id: "users", label: "👥 Users" },
 						{ id: "reports", label: "💰 Reports" },
+						{ id: "mileage", label: "🗺️ Mileage" },
+						{ id: "lostfound", label: "🔍 Lost & Found" },
 					].map((item) => (
 						<button
 							key={item.id}
@@ -60,6 +62,8 @@ export default function AdminDashboard() {
 				{activeTab === "schedules" && <SchedulesTab />}
 				{activeTab === "users" && <UsersTab />}
 				{activeTab === "reports" && <ReportsRedirect />}
+				{activeTab === "mileage" && <MileageRedirect />}
+				{activeTab === "lostfound" && <LostFoundRedirect />}
 			</div>
 		</div>
 	);
@@ -95,6 +99,14 @@ function Overview() {
 			</div>
 		</div>
 	);
+}
+
+function LostFoundRedirect() {
+	const router = useRouter();
+	useEffect(() => {
+		router.push("/lostfound");
+	}, []);
+	return <p className="text-gray-500">Loading Lost & Found...</p>;
 }
 
 function BusesTab() {
@@ -462,6 +474,14 @@ function SchedulesTab() {
 			</div>
 		</div>
 	);
+}
+
+function MileageRedirect() {
+	const router = useRouter();
+	useEffect(() => {
+		router.push("/dashboard/admin/mileage");
+	}, []);
+	return <p className="text-gray-500">Loading mileage...</p>;
 }
 
 function UsersTab() {

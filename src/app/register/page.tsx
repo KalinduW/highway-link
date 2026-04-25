@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function RegisterPage() {
 	const router = useRouter();
@@ -27,6 +31,11 @@ export default function RegisterPage() {
 
 		if (formData.password !== formData.confirmPassword) {
 			setError("Passwords do not match");
+			return;
+		}
+
+		if (formData.password.length < 6) {
+			setError("Password must be at least 6 characters");
 			return;
 		}
 
@@ -61,125 +70,182 @@ export default function RegisterPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-			<div className="max-w-md w-full bg-white rounded-xl shadow-md p-8">
-				<h2 className="text-3xl font-bold text-center text-blue-600 mb-2">
-					HighwayLink
-				</h2>
-				<p className="text-center text-gray-500 mb-6">Create your account</p>
+		<div className="min-h-screen bg-gray-50 flex flex-col">
+			{/* Navbar */}
+			<nav className="bg-white border-b px-8 py-4 flex justify-between items-center">
+				<Link href="/" className="flex items-center gap-2">
+					<span className="text-2xl">🚌</span>
+					<span className="text-xl font-bold text-blue-600">HighwayLink</span>
+				</Link>
+				<Link href="/login">
+					<Button variant="outline" size="sm" className="rounded-full px-5">
+						Login
+					</Button>
+				</Link>
+			</nav>
 
-				{error && (
-					<div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
-						{error}
-					</div>
-				)}
-
-				<form onSubmit={handleSubmit} className="space-y-4">
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Full Name
-						</label>
-						<input
-							type="text"
-							name="fullName"
-							value={formData.fullName}
-							onChange={handleChange}
-							required
-							className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-							placeholder="Enter your full name"
-						/>
-					</div>
-
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
-							NIC Number
-						</label>
-						<input
-							type="text"
-							name="nic"
-							value={formData.nic}
-							onChange={handleChange}
-							required
-							className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-							placeholder="Enter your NIC number"
-						/>
+			{/* Main */}
+			<div className="flex-1 flex items-center justify-center px-4 py-12">
+				<div className="w-full max-w-md">
+					{/* Header */}
+					<div className="text-center mb-8">
+						<div className="w-16 h-16 bg-white border-2 border-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
+							👤
+						</div>
+						<h1 className="text-3xl font-extrabold text-gray-800 mb-2">
+							Create your account
+						</h1>
+						<p className="text-gray-500">
+							Join thousands of passengers on HighwayLink
+						</p>
 					</div>
 
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Email Address
-						</label>
-						<input
-							type="email"
-							name="email"
-							value={formData.email}
-							onChange={handleChange}
-							required
-							className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-							placeholder="Enter your email"
-						/>
+					<Card className="shadow-lg border-0">
+						<CardContent className="p-8">
+							{error && (
+								<div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-xl mb-6 text-sm flex items-center gap-2">
+									<span>⚠️</span> {error}
+								</div>
+							)}
+
+							<form onSubmit={handleSubmit} className="space-y-4">
+								<div>
+									<Label className="text-gray-700 font-medium mb-1.5 block">
+										Full Name
+									</Label>
+									<Input
+										type="text"
+										name="fullName"
+										value={formData.fullName}
+										onChange={handleChange}
+										required
+										placeholder="Enter your full name"
+										className="h-11"
+									/>
+								</div>
+
+								<div>
+									<Label className="text-gray-700 font-medium mb-1.5 block">
+										NIC Number
+									</Label>
+									<Input
+										type="text"
+										name="nic"
+										value={formData.nic}
+										onChange={handleChange}
+										required
+										placeholder="Enter your NIC number"
+										className="h-11"
+									/>
+								</div>
+
+								<div className="grid grid-cols-2 gap-4">
+									<div>
+										<Label className="text-gray-700 font-medium mb-1.5 block">
+											Email
+										</Label>
+										<Input
+											type="email"
+											name="email"
+											value={formData.email}
+											onChange={handleChange}
+											required
+											placeholder="Your email"
+											className="h-11"
+										/>
+									</div>
+									<div>
+										<Label className="text-gray-700 font-medium mb-1.5 block">
+											Phone
+										</Label>
+										<Input
+											type="tel"
+											name="phone"
+											value={formData.phone}
+											onChange={handleChange}
+											required
+											placeholder="07X XXX XXXX"
+											className="h-11"
+										/>
+									</div>
+								</div>
+
+								<div>
+									<Label className="text-gray-700 font-medium mb-1.5 block">
+										Password
+									</Label>
+									<Input
+										type="password"
+										name="password"
+										value={formData.password}
+										onChange={handleChange}
+										required
+										placeholder="Create a password"
+										className="h-11"
+									/>
+								</div>
+
+								<div>
+									<Label className="text-gray-700 font-medium mb-1.5 block">
+										Confirm Password
+									</Label>
+									<Input
+										type="password"
+										name="confirmPassword"
+										value={formData.confirmPassword}
+										onChange={handleChange}
+										required
+										placeholder="Confirm your password"
+										className="h-11"
+									/>
+								</div>
+
+								<Button
+									type="submit"
+									disabled={loading}
+									className="w-full h-11 text-base font-semibold rounded-xl mt-2"
+								>
+									{loading ? "Creating account..." : "Create Account →"}
+								</Button>
+							</form>
+
+							<div className="mt-6 pt-6 border-t border-gray-100 text-center">
+								<p className="text-gray-500 text-sm">
+									Already have an account?{" "}
+									<Link
+										href="/login"
+										className="text-blue-600 font-semibold hover:underline"
+									>
+										Login here
+									</Link>
+								</p>
+							</div>
+						</CardContent>
+					</Card>
+
+					{/* Benefits */}
+					<div className="mt-6 bg-blue-50 border border-blue-100 rounded-2xl p-5">
+						<p className="text-sm font-semibold text-blue-700 mb-3">
+							✅ What you get with HighwayLink
+						</p>
+						<div className="space-y-2">
+							{[
+								"Book seats on any highway bus instantly",
+								"Get QR-coded digital tickets",
+								"Track your bus in real time",
+								"Reschedule or cancel anytime",
+							].map((benefit) => (
+								<div
+									key={benefit}
+									className="flex items-center gap-2 text-sm text-blue-600"
+								>
+									<span className="text-blue-400">→</span>
+									{benefit}
+								</div>
+							))}
+						</div>
 					</div>
-
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Phone Number
-						</label>
-						<input
-							type="tel"
-							name="phone"
-							value={formData.phone}
-							onChange={handleChange}
-							required
-							className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-							placeholder="Enter your phone number"
-						/>
-					</div>
-
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Password
-						</label>
-						<input
-							type="password"
-							name="password"
-							value={formData.password}
-							onChange={handleChange}
-							required
-							className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-							placeholder="Create a password"
-						/>
-					</div>
-
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
-							Confirm Password
-						</label>
-						<input
-							type="password"
-							name="confirmPassword"
-							value={formData.confirmPassword}
-							onChange={handleChange}
-							required
-							className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-							placeholder="Confirm your password"
-						/>
-					</div>
-
-					<button
-						type="submit"
-						disabled={loading}
-						className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
-					>
-						{loading ? "Creating account..." : "Register"}
-					</button>
-				</form>
-
-				<p className="text-center text-sm text-gray-500 mt-4">
-					Already have an account?{" "}
-					<Link href="/login" className="text-blue-600 hover:underline">
-						Login here
-					</Link>
-				</p>
+				</div>
 			</div>
 		</div>
 	);
