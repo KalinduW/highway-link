@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { lostFoundItems, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export async function GET() {
 	try {
@@ -93,6 +93,32 @@ export async function PATCH(req: NextRequest) {
 		});
 	} catch (error) {
 		console.error("Update item error:", error);
+		return NextResponse.json(
+			{ error: "Internal server error" },
+			{ status: 500 }
+		);
+	}
+}
+
+export async function DELETE(req: NextRequest) {
+	try {
+		const { searchParams } = new URL(req.url);
+		const itemId = searchParams.get("itemId");
+
+		if (!itemId) {
+			return NextResponse.json(
+				{ error: "Item ID is required" },
+				{ status: 400 }
+			);
+		}
+
+		await db.delete(lostFoundItems).where(eq(lostFoundItems.id, itemId));
+
+		return NextResponse.json({
+			message: "Item deleted successfully",
+		});
+	} catch (error) {
+		console.error("Delete item error:", error);
 		return NextResponse.json(
 			{ error: "Internal server error" },
 			{ status: 500 }

@@ -27,16 +27,19 @@ export default function DriverDashboard() {
 	const [trips, setTrips] = useState<Trip[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [email, setEmail] = useState("");
+	const [userName, setUserName] = useState("");
 	const [message, setMessage] = useState("");
 	const [activeTab, setActiveTab] = useState("upcoming");
 
 	useEffect(() => {
 		const storedEmail = localStorage.getItem("userEmail");
+		const storedName = localStorage.getItem("userName");
 		if (!storedEmail) {
 			router.push("/login");
 			return;
 		}
 		setEmail(storedEmail);
+		setUserName(storedName || "");
 		fetchTrips(storedEmail);
 	}, []);
 
@@ -88,16 +91,41 @@ export default function DriverDashboard() {
 		});
 	};
 
-	const getStatusColor = (status: string) => {
+	const formatDate = (dateStr: string) => {
+		return new Date(dateStr).toLocaleDateString("en-US", {
+			weekday: "long",
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+		});
+	};
+
+	const getStatusConfig = (status: string) => {
 		switch (status) {
 			case "active":
-				return "bg-green-100 text-green-700";
+				return {
+					color: "bg-green-100 text-green-700 border-green-200",
+					dot: "bg-green-500",
+					label: "Active",
+				};
 			case "completed":
-				return "bg-gray-100 text-gray-700";
+				return {
+					color: "bg-gray-100 text-gray-600 border-gray-200",
+					dot: "bg-gray-400",
+					label: "Completed",
+				};
 			case "cancelled":
-				return "bg-red-100 text-red-700";
+				return {
+					color: "bg-red-100 text-red-700 border-red-200",
+					dot: "bg-red-500",
+					label: "Cancelled",
+				};
 			default:
-				return "bg-blue-100 text-blue-700";
+				return {
+					color: "bg-blue-100 text-blue-700 border-blue-200",
+					dot: "bg-blue-500",
+					label: "Scheduled",
+				};
 		}
 	};
 
@@ -105,50 +133,110 @@ export default function DriverDashboard() {
 		(t) => t.status === "scheduled" || t.status === "active"
 	);
 	const completedTrips = trips.filter((t) => t.status === "completed");
+	const totalDistance = trips
+		.filter((t) => t.status === "completed")
+		.reduce((acc, t) => acc + parseFloat(t.distance || "0"), 0);
+
+	const initials = userName
+		? userName
+				.split(" ")
+				.map((n) => n[0])
+				.join("")
+				.toUpperCase()
+				.slice(0, 2)
+		: "D";
 
 	return (
 		<div className="min-h-screen bg-gray-50">
 			{/* Navbar */}
-			<nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-				<Link href="/" className="text-2xl font-bold text-blue-600">
-					HighwayLink
+			<nav className="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+				<Link href="/" className="flex items-center gap-2">
+					<span className="text-2xl">🚌</span>
+					<span className="text-xl font-bold text-blue-600">HighwayLink</span>
 				</Link>
 				<div className="flex items-center gap-4">
-					<span className="text-gray-600 text-sm">{email}</span>
-					<Button variant="outline" size="sm" onClick={handleLogout}>
+					<div className="hidden md:flex items-center gap-3">
+						<div className="w-9 h-9 bg-green-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+							{initials}
+						</div>
+						<div>
+							<p className="text-sm font-semibold text-gray-800">{userName}</p>
+							<p className="text-xs text-gray-400">Driver</p>
+						</div>
+					</div>
+					<Button
+						variant="outline"
+						size="sm"
+						className="rounded-full"
+						onClick={handleLogout}
+					>
 						Logout
 					</Button>
 				</div>
 			</nav>
 
 			<div className="max-w-4xl mx-auto px-6 py-10">
-				{/* Header */}
-				<div className="mb-8">
-					<h1 className="text-2xl font-bold text-gray-800">Driver Dashboard</h1>
-					<p className="text-gray-500 text-sm">
-						View and manage your assigned trips
-					</p>
+				{/* Welcome Banner */}
+				<div className="bg-gradient-to-r from-green-600 to-green-500 rounded-2xl p-6 mb-8 text-white flex justify-between items-center">
+					<div>
+						<p className="text-green-100 text-sm mb-1">Welcome back,</p>
+						<h1 className="text-2xl font-extrabold">
+							{userName || "Driver"} 🚗
+						</h1>
+						<p className="text-green-100 text-sm mt-1">
+							{upcomingTrips.length} upcoming trip
+							{upcomingTrips.length !== 1 ? "s" : ""}
+						</p>
+					</div>
+					<div className="text-right">
+						<p className="text-green-100 text-xs mb-1">
+							Total Distance Covered
+						</p>
+						<p className="text-3xl font-extrabold">
+							{totalDistance.toFixed(0)} km
+						</p>
+					</div>
 				</div>
 
 				{/* Stats */}
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
 					{[
-						{ label: "Total Trips", value: trips.length, icon: "🚌" },
-						{ label: "Upcoming", value: upcomingTrips.length, icon: "📅" },
-						{ label: "Completed", value: completedTrips.length, icon: "✅" },
 						{
-							label: "Total Distance",
-							value: `${trips
-								.reduce((acc, t) => acc + parseFloat(t.distance || "0"), 0)
-								.toFixed(0)} km`,
+							label: "Total Trips",
+							value: trips.length,
+							icon: "🚌",
+							color: "bg-blue-50 text-blue-600",
+						},
+						{
+							label: "Upcoming",
+							value: upcomingTrips.length,
+							icon: "📅",
+							color: "bg-green-50 text-green-600",
+						},
+						{
+							label: "Completed",
+							value: completedTrips.length,
+							icon: "✅",
+							color: "bg-gray-50 text-gray-600",
+						},
+						{
+							label: "Km Driven",
+							value: `${totalDistance.toFixed(0)}`,
 							icon: "🗺️",
+							color: "bg-purple-50 text-purple-600",
 						},
 					].map((card) => (
-						<Card key={card.label}>
-							<CardContent className="pt-6">
-								<div className="text-2xl mb-1">{card.icon}</div>
-								<p className="text-xl font-bold text-gray-800">{card.value}</p>
-								<p className="text-gray-500 text-xs">{card.label}</p>
+						<Card key={card.label} className="border-0 shadow-sm">
+							<CardContent className="pt-5 pb-5">
+								<div
+									className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-3 ${card.color}`}
+								>
+									{card.icon}
+								</div>
+								<p className="text-2xl font-extrabold text-gray-800">
+									{card.value}
+								</p>
+								<p className="text-gray-500 text-xs mt-0.5">{card.label}</p>
 							</CardContent>
 						</Card>
 					))}
@@ -156,10 +244,10 @@ export default function DriverDashboard() {
 
 				{message && (
 					<div
-						className={`p-3 rounded-lg mb-6 text-sm ${
+						className={`p-3 rounded-xl mb-6 text-sm border ${
 							message.includes("success")
-								? "bg-green-50 text-green-600"
-								: "bg-red-50 text-red-600"
+								? "bg-green-50 border-green-200 text-green-600"
+								: "bg-red-50 border-red-200 text-red-600"
 						}`}
 					>
 						{message}
@@ -167,7 +255,7 @@ export default function DriverDashboard() {
 				)}
 
 				{/* Tabs */}
-				<div className="flex gap-4 mb-6">
+				<div className="flex gap-2 mb-6 bg-white border border-gray-100 rounded-xl p-1 w-fit">
 					{[
 						{ id: "upcoming", label: "📅 Upcoming Trips" },
 						{ id: "completed", label: "✅ Completed Trips" },
@@ -175,10 +263,10 @@ export default function DriverDashboard() {
 						<button
 							key={tab.id}
 							onClick={() => setActiveTab(tab.id)}
-							className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+							className={`px-5 py-2 rounded-lg text-sm font-medium transition ${
 								activeTab === tab.id
-									? "bg-blue-600 text-white"
-									: "bg-white text-gray-600 hover:bg-gray-100"
+									? "bg-green-600 text-white shadow-sm"
+									: "text-gray-600 hover:bg-gray-50"
 							}`}
 						>
 							{tab.label}
@@ -187,112 +275,140 @@ export default function DriverDashboard() {
 				</div>
 
 				{loading && (
-					<p className="text-center text-gray-500 py-10">Loading trips...</p>
+					<div className="text-center py-20">
+						<p className="text-gray-500">Loading trips...</p>
+					</div>
 				)}
 
 				{/* Upcoming Trips */}
 				{activeTab === "upcoming" && !loading && (
 					<div className="space-y-4">
 						{upcomingTrips.length === 0 && (
-							<Card>
-								<CardContent className="py-10 text-center">
-									<p className="text-4xl mb-3">🚌</p>
-									<p className="text-gray-600 font-medium">No upcoming trips</p>
+							<Card className="border-0 shadow-sm">
+								<CardContent className="py-16 text-center">
+									<div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
+										🚌
+									</div>
+									<h3 className="text-lg font-bold text-gray-800 mb-2">
+										No upcoming trips
+									</h3>
 									<p className="text-gray-400 text-sm">
 										You have no scheduled trips at the moment
 									</p>
 								</CardContent>
 							</Card>
 						)}
-						{upcomingTrips.map((trip) => (
-							<Card key={trip.scheduleId}>
-								<CardContent className="pt-6">
-									<div className="flex justify-between items-start mb-4">
-										<div>
-											<h3 className="text-lg font-bold text-gray-800">
-												{trip.origin} → {trip.destination}
-											</h3>
-											<p className="text-gray-500 text-sm">
-												{trip.busType} — {trip.licensePlate}
-											</p>
+						{upcomingTrips.map((trip) => {
+							const statusConfig = getStatusConfig(trip.status);
+							return (
+								<Card
+									key={trip.scheduleId}
+									className="border-0 shadow-sm hover:shadow-md transition"
+								>
+									<CardContent className="p-6">
+										{/* Trip Header */}
+										<div className="flex justify-between items-start mb-4">
+											<div>
+												<div className="flex items-center gap-3 mb-1">
+													<h3 className="text-lg font-extrabold text-gray-800">
+														{trip.origin} → {trip.destination}
+													</h3>
+													<span
+														className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${statusConfig.color}`}
+													>
+														<span
+															className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`}
+														></span>
+														{statusConfig.label}
+													</span>
+												</div>
+												<p className="text-gray-500 text-sm">
+													🚌 {trip.busType} — {trip.licensePlate}
+												</p>
+											</div>
+											<div className="text-right">
+												<p className="text-blue-600 font-bold">
+													LKR {trip.fare}
+												</p>
+												<p className="text-gray-400 text-xs">fare per seat</p>
+											</div>
 										</div>
-										<span
-											className={`text-xs font-semibold px-2 py-1 rounded-full ${getStatusColor(
-												trip.status
-											)}`}
-										>
-											{trip.status.toUpperCase()}
-										</span>
-									</div>
 
-									<Separator className="mb-4" />
+										<Separator className="mb-4" />
 
-									<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-										<div>
-											<p className="text-xs text-gray-500 mb-1">Departure</p>
-											<p className="text-sm font-semibold text-gray-800">
-												{formatTime(trip.departureTime)}
-											</p>
+										{/* Trip Details */}
+										<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+											<div className="bg-gray-50 rounded-xl p-3">
+												<p className="text-xs text-gray-400 mb-1">
+													🕐 Departure
+												</p>
+												<p className="text-sm font-bold text-gray-800">
+													{formatTime(trip.departureTime)}
+												</p>
+											</div>
+											<div className="bg-gray-50 rounded-xl p-3">
+												<p className="text-xs text-gray-400 mb-1">🏁 Arrival</p>
+												<p className="text-sm font-bold text-gray-800">
+													{formatTime(trip.arrivalTime)}
+												</p>
+											</div>
+											<div className="bg-gray-50 rounded-xl p-3">
+												<p className="text-xs text-gray-400 mb-1">
+													📍 Distance
+												</p>
+												<p className="text-sm font-bold text-gray-800">
+													{trip.distance || "N/A"}
+												</p>
+											</div>
+											<div className="bg-gray-50 rounded-xl p-3">
+												<p className="text-xs text-gray-400 mb-1">⏱ Duration</p>
+												<p className="text-sm font-bold text-gray-800">
+													{trip.duration || "N/A"}
+												</p>
+											</div>
 										</div>
-										<div>
-											<p className="text-xs text-gray-500 mb-1">Arrival</p>
-											<p className="text-sm font-semibold text-gray-800">
-												{formatTime(trip.arrivalTime)}
-											</p>
-										</div>
-										<div>
-											<p className="text-xs text-gray-500 mb-1">Distance</p>
-											<p className="text-sm font-semibold text-gray-800">
-												{trip.distance || "N/A"}
-											</p>
-										</div>
-										<div>
-											<p className="text-xs text-gray-500 mb-1">Duration</p>
-											<p className="text-sm font-semibold text-gray-800">
-												{trip.duration || "N/A"}
-											</p>
-										</div>
-									</div>
 
-									{/* Status Update Buttons */}
-									<div className="flex gap-2 flex-wrap">
-										{trip.status === "scheduled" && (
-											<Button
-												size="sm"
-												className="bg-green-600 hover:bg-green-700"
-												onClick={() =>
-													handleStatusUpdate(trip.scheduleId, "active")
-												}
-											>
-												Start Trip
-											</Button>
-										)}
-										{trip.status === "active" && (
-											<Button
-												size="sm"
-												className="bg-blue-600 hover:bg-blue-700"
-												onClick={() =>
-													handleStatusUpdate(trip.scheduleId, "completed")
-												}
-											>
-												Complete Trip
-											</Button>
-										)}
-										{trip.status !== "cancelled" && (
-											<Button
-												size="sm"
-												variant="destructive"
-												onClick={() =>
-													handleStatusUpdate(trip.scheduleId, "cancelled")
-												}
-											>
-												Cancel Trip
-											</Button>
-										)}
-									</div>
-								</CardContent>
-							</Card>
-						))}
+										{/* Action Buttons */}
+										<div className="flex gap-2 flex-wrap">
+											{trip.status === "scheduled" && (
+												<Button
+													size="sm"
+													className="bg-green-600 hover:bg-green-700 rounded-full px-5"
+													onClick={() =>
+														handleStatusUpdate(trip.scheduleId, "active")
+													}
+												>
+													🚦 Start Trip
+												</Button>
+											)}
+											{trip.status === "active" && (
+												<Button
+													size="sm"
+													className="bg-blue-600 hover:bg-blue-700 rounded-full px-5"
+													onClick={() =>
+														handleStatusUpdate(trip.scheduleId, "completed")
+													}
+												>
+													🏁 Complete Trip
+												</Button>
+											)}
+											{trip.status !== "cancelled" && (
+												<Button
+													size="sm"
+													variant="outline"
+													className="rounded-full px-5 border-red-200 text-red-500 hover:bg-red-50"
+													onClick={() =>
+														handleStatusUpdate(trip.scheduleId, "cancelled")
+													}
+												>
+													✕ Cancel Trip
+												</Button>
+											)}
+										</div>
+									</CardContent>
+								</Card>
+							);
+						})}
 					</div>
 				)}
 
@@ -300,55 +416,71 @@ export default function DriverDashboard() {
 				{activeTab === "completed" && !loading && (
 					<div className="space-y-4">
 						{completedTrips.length === 0 && (
-							<Card>
-								<CardContent className="py-10 text-center">
-									<p className="text-4xl mb-3">✅</p>
-									<p className="text-gray-600 font-medium">
+							<Card className="border-0 shadow-sm">
+								<CardContent className="py-16 text-center">
+									<div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
+										✅
+									</div>
+									<h3 className="text-lg font-bold text-gray-800 mb-2">
 										No completed trips yet
+									</h3>
+									<p className="text-gray-400 text-sm">
+										Your completed trips will appear here
 									</p>
 								</CardContent>
 							</Card>
 						)}
 						{completedTrips.map((trip) => (
-							<Card key={trip.scheduleId} className="opacity-75">
-								<CardContent className="pt-6">
+							<Card
+								key={trip.scheduleId}
+								className="border-0 shadow-sm opacity-80"
+							>
+								<CardContent className="p-6">
 									<div className="flex justify-between items-start mb-4">
 										<div>
-											<h3 className="text-lg font-bold text-gray-800">
-												{trip.origin} → {trip.destination}
-											</h3>
-											<p className="text-gray-500 text-sm">
-												{trip.busType} — {trip.licensePlate}
+											<div className="flex items-center gap-3 mb-1">
+												<h3 className="text-lg font-bold text-gray-700">
+													{trip.origin} → {trip.destination}
+												</h3>
+												<span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-200">
+													COMPLETED
+												</span>
+											</div>
+											<p className="text-gray-400 text-sm">
+												🚌 {trip.busType} — {trip.licensePlate}
 											</p>
 										</div>
-										<span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-											COMPLETED
-										</span>
+										<div className="text-right">
+											<p className="text-gray-600 font-bold">LKR {trip.fare}</p>
+											<p className="text-gray-400 text-xs">fare per seat</p>
+										</div>
 									</div>
+
 									<Separator className="mb-4" />
+
 									<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-										<div>
-											<p className="text-xs text-gray-500 mb-1">Departure</p>
-											<p className="text-sm font-semibold text-gray-800">
+										<div className="bg-gray-50 rounded-xl p-3">
+											<p className="text-xs text-gray-400 mb-1">🕐 Departure</p>
+											<p className="text-sm font-bold text-gray-700">
 												{formatTime(trip.departureTime)}
 											</p>
 										</div>
-										<div>
-											<p className="text-xs text-gray-500 mb-1">Arrival</p>
-											<p className="text-sm font-semibold text-gray-800">
+										<div className="bg-gray-50 rounded-xl p-3">
+											<p className="text-xs text-gray-400 mb-1">🏁 Arrival</p>
+											<p className="text-sm font-bold text-gray-700">
 												{formatTime(trip.arrivalTime)}
 											</p>
 										</div>
-										<div>
-											<p className="text-xs text-gray-500 mb-1">Distance</p>
-											<p className="text-sm font-semibold text-gray-800">
+										<div className="bg-gray-50 rounded-xl p-3">
+											<p className="text-xs text-gray-400 mb-1">📍 Distance</p>
+											<p className="text-sm font-bold text-gray-700">
 												{trip.distance || "N/A"}
 											</p>
 										</div>
-										<div>
-											<p className="text-xs text-gray-500 mb-1">Fare</p>
-											<p className="text-sm font-semibold text-blue-600">
-												LKR {trip.fare}
+										<div className="bg-gray-50 rounded-xl p-3">
+											<p className="text-xs text-gray-400 mb-1">⏱ Duration</p>
+											<p className="text-sm font-bold text-gray-700">
+												{trip.duration || "N/A"}
 											</p>
 										</div>
 									</div>

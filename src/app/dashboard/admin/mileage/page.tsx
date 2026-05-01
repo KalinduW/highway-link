@@ -84,25 +84,19 @@ export default function MileagePage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50">
-			{/* Navbar */}
-			<nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-				<Link href="/" className="text-2xl font-bold text-blue-600">
-					HighwayLink
-				</Link>
-				<div className="flex items-center gap-4">
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => router.push("/dashboard/admin")}
-					>
-						← Back to Dashboard
-					</Button>
-					<Button variant="outline" size="sm" onClick={() => window.print()}>
-						🖨️ Print Report
-					</Button>
+		<div className="bg-gray-50 min-h-screen">
+			{/* Top Bar */}
+			<div className="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-30">
+				<div>
+					<h1 className="text-lg font-bold text-gray-800">
+						🛣️ Mileage Tracking
+					</h1>
+					<p className="text-xs text-gray-400">HighwayLink Admin Panel</p>
 				</div>
-			</nav>
+				<Button variant="outline" size="sm" onClick={() => window.print()}>
+					🖨️ Print Report
+				</Button>
+			</div>
 
 			<div className="max-w-4xl mx-auto px-6 py-10">
 				<div className="mb-8">
