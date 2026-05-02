@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import LocationInput from "@/components/LocationInput";
 
 export default function HomePage() {
 	const router = useRouter();
@@ -76,31 +77,25 @@ export default function HomePage() {
 							<form onSubmit={handleSearch}>
 								<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
 									<div className="text-left">
-										<Label className="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-1.5 block">
-											From
-										</Label>
-										<Input
+										<LocationInput
+											label="From"
 											value={search.origin}
-											onChange={(e) =>
-												setSearch({ ...search, origin: e.target.value })
+											onChange={(value) =>
+												setSearch({ ...search, origin: value })
 											}
-											required
 											placeholder="e.g. Colombo"
-											className="h-11"
+											required
 										/>
 									</div>
 									<div className="text-left">
-										<Label className="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-1.5 block">
-											To
-										</Label>
-										<Input
+										<LocationInput
+											label="To"
 											value={search.destination}
-											onChange={(e) =>
-												setSearch({ ...search, destination: e.target.value })
+											onChange={(value) =>
+												setSearch({ ...search, destination: value })
 											}
-											required
 											placeholder="e.g. Matara"
-											className="h-11"
+											required
 										/>
 									</div>
 									<div className="text-left">

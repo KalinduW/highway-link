@@ -6,7 +6,6 @@ export async function POST(req: NextRequest) {
 	try {
 		const { licensePlate, busType, totalSeats } = await req.json();
 
-		// Get the first admin user from the database
 		const adminUsers = await db.select().from(users).limit(1);
 
 		if (adminUsers.length === 0) {
@@ -29,17 +28,91 @@ export async function POST(req: NextRequest) {
 			.returning();
 
 		const busId = newBus[0].id;
+		const total = parseInt(totalSeats);
 
-		// Auto-create seats for this bus
+		// Generate seats based on correct bus layout
+		// S1 = front left window seat (next to driver)
+		// Then rows of 4 (2+2): W, A, A, W
+		// Last row = 5 seats: W, M, M, M, W
+
 		const seatRows = [];
-		for (let i = 1; i <= parseInt(totalSeats); i++) {
+		let seatNum = 1;
+
+		// S1 — front left seat (window)
+		seatRows.push({
+			busId,
+			seatNumber: `S${seatNum}`,
+			seatType: "window" as const,
+			status: "available" as const,
+		});
+		seatNum++;
+
+		// Calculate how many regular rows and if there's a last row of 5
+		const remainingSeats = total - 1; // minus S1
+		const hasLastRow = total >= 6;
+		const lastRowSeats = 5;
+		const regularSeats = hasLastRow
+			? remainingSeats - lastRowSeats
+			: remainingSeats;
+		const regularRows = Math.floor(regularSeats / 4);
+
+		// Regular rows — 2+2 layout
+		for (let row = 0; row < regularRows; row++) {
+			// Left side
 			seatRows.push({
 				busId,
-				seatNumber: `S${i}`,
-				seatType: i % 2 === 0 ? ("aisle" as const) : ("window" as const),
+				seatNumber: `S${seatNum}`,
+				seatType: "window" as const,
 				status: "available" as const,
 			});
+			seatNum++;
+
+			seatRows.push({
+				busId,
+				seatNumber: `S${seatNum}`,
+				seatType: "aisle" as const,
+				status: "available" as const,
+			});
+			seatNum++;
+
+			// Right side
+			seatRows.push({
+				busId,
+				seatNumber: `S${seatNum}`,
+				seatType: "aisle" as const,
+				status: "available" as const,
+			});
+			seatNum++;
+
+			seatRows.push({
+				busId,
+				seatNumber: `S${seatNum}`,
+				seatType: "window" as const,
+				status: "available" as const,
+			});
+			seatNum++;
 		}
+
+		// Last row — 5 seats: W, M, M, M, W
+		if (hasLastRow) {
+			const lastRowTypes: ("window" | "aisle" | "middle")[] = [
+				"window",
+				"middle",
+				"middle",
+				"middle",
+				"window",
+			];
+			for (const type of lastRowTypes) {
+				seatRows.push({
+					busId,
+					seatNumber: `S${seatNum}`,
+					seatType: type,
+					status: "available" as const,
+				});
+				seatNum++;
+			}
+		}
+
 		await db.insert(seats).values(seatRows);
 
 		return NextResponse.json(

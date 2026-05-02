@@ -1,8 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import LocationInput from "@/components/LocationInput";
 
 interface BusResult {
 	scheduleId: string;
@@ -18,7 +22,7 @@ interface BusResult {
 	duration: string;
 }
 
-export default function BusSearchPage() {
+function BusSearchResults() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const origin = searchParams.get("origin") || "";
@@ -28,6 +32,7 @@ export default function BusSearchPage() {
 	const [results, setResults] = useState<BusResult[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const [sortBy, setSortBy] = useState("departure");
 
 	useEffect(() => {
 		const fetchBuses = async () => {
@@ -47,7 +52,6 @@ export default function BusSearchPage() {
 				setLoading(false);
 			}
 		};
-
 		fetchBuses();
 	}, [origin, destination, date]);
 
@@ -58,127 +62,296 @@ export default function BusSearchPage() {
 		});
 	};
 
+	const formatDate = (dateStr: string) => {
+		return new Date(dateStr).toLocaleDateString("en-US", {
+			weekday: "long",
+			month: "long",
+			day: "numeric",
+		});
+	};
+
+	const getDuration = (departure: string, arrival: string) => {
+		const diff = new Date(arrival).getTime() - new Date(departure).getTime();
+		const hours = Math.floor(diff / (1000 * 60 * 60));
+		const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+		return `${hours}h ${minutes}m`;
+	};
+
+	const getBusTypeConfig = (busType: string) => {
+		switch (busType) {
+			case "luxury":
+				return { color: "bg-purple-100 text-purple-700", label: "✨ Luxury" };
+			case "AC":
+				return { color: "bg-blue-100 text-blue-700", label: "❄️ AC" };
+			default:
+				return { color: "bg-gray-100 text-gray-700", label: "🚌 Non-AC" };
+		}
+	};
+
+	const sortedResults = [...results].sort((a, b) => {
+		if (sortBy === "fare") return parseFloat(a.fare) - parseFloat(b.fare);
+		if (sortBy === "departure")
+			return (
+				new Date(a.departureTime).getTime() -
+				new Date(b.departureTime).getTime()
+			);
+		return 0;
+	});
+
+	return (
+		<div className="max-w-4xl mx-auto px-6 py-8">
+			{/* Search Summary */}
+			<div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+				<div className="flex flex-wrap justify-between items-center gap-4">
+					<div>
+						<div className="flex items-center gap-3 mb-1">
+							<h2 className="text-xl font-extrabold text-gray-800">
+								{origin} → {destination}
+							</h2>
+							{results.length > 0 && (
+								<span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+									{results.length} bus{results.length !== 1 ? "es" : ""} found
+								</span>
+							)}
+						</div>
+						<p className="text-gray-400 text-sm">
+							📅 {date ? formatDate(date) : "Any date"}
+						</p>
+					</div>
+					<Button
+						variant="outline"
+						size="sm"
+						className="rounded-full"
+						onClick={() => router.push("/")}
+					>
+						← Modify Search
+					</Button>
+				</div>
+			</div>
+
+			{/* Loading */}
+			{loading && (
+				<div className="text-center py-20">
+					<div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl animate-pulse">
+						🚌
+					</div>
+					<p className="text-gray-500 font-medium">
+						Searching for available buses...
+					</p>
+					<p className="text-gray-400 text-sm mt-1">This won't take long</p>
+				</div>
+			)}
+
+			{/* Error */}
+			{error && (
+				<div className="text-center py-20">
+					<div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
+						⚠️
+					</div>
+					<p className="text-red-500 font-medium">{error}</p>
+					<Button
+						variant="outline"
+						size="sm"
+						className="mt-4 rounded-full"
+						onClick={() => router.push("/")}
+					>
+						Try Again
+					</Button>
+				</div>
+			)}
+
+			{/* No Results */}
+			{!loading && !error && results.length === 0 && (
+				<div className="text-center py-20">
+					<div className="w-20 h-20 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-4xl">
+						🚌
+					</div>
+					<h3 className="text-xl font-bold text-gray-700 mb-2">
+						No buses found
+					</h3>
+					<p className="text-gray-400 mb-6">
+						No buses available for{" "}
+						<strong>
+							{origin} → {destination}
+						</strong>{" "}
+						on this date.
+					</p>
+					<div className="flex justify-center gap-3">
+						<Button
+							variant="outline"
+							className="rounded-full"
+							onClick={() => router.push("/")}
+						>
+							Change Route
+						</Button>
+					</div>
+				</div>
+			)}
+
+			{/* Results */}
+			{!loading && sortedResults.length > 0 && (
+				<div>
+					{/* Sort Bar */}
+					<div className="flex justify-between items-center mb-4">
+						<p className="text-gray-500 text-sm">
+							Showing <strong>{results.length}</strong> available bus
+							{results.length !== 1 ? "es" : ""}
+						</p>
+						<div className="flex items-center gap-2">
+							<span className="text-gray-400 text-sm">Sort by:</span>
+							<div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1">
+								{[
+									{ id: "departure", label: "🕐 Departure" },
+									{ id: "fare", label: "💰 Price" },
+								].map((sort) => (
+									<button
+										key={sort.id}
+										onClick={() => setSortBy(sort.id)}
+										className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+											sortBy === sort.id
+												? "bg-blue-600 text-white"
+												: "text-gray-600 hover:bg-gray-50"
+										}`}
+									>
+										{sort.label}
+									</button>
+								))}
+							</div>
+						</div>
+					</div>
+
+					<div className="space-y-4">
+						{sortedResults.map((bus) => {
+							const busTypeConfig = getBusTypeConfig(bus.busType);
+							const tripDuration = getDuration(
+								bus.departureTime,
+								bus.arrivalTime
+							);
+
+							return (
+								<Card
+									key={bus.scheduleId}
+									className="border-0 shadow-sm hover:shadow-md transition group"
+								>
+									<CardContent className="p-6">
+										<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+											{/* Left — Times */}
+											<div className="flex-1">
+												<div className="flex items-center gap-4 mb-3">
+													<span
+														className={`text-xs font-semibold px-2.5 py-1 rounded-full ${busTypeConfig.color}`}
+													>
+														{busTypeConfig.label}
+													</span>
+													<span className="text-gray-400 text-xs">
+														🚌 {bus.licensePlate}
+													</span>
+													<span className="text-gray-400 text-xs">
+														💺 {bus.totalSeats} seats
+													</span>
+												</div>
+
+												{/* Time Display */}
+												<div className="flex items-center gap-4">
+													<div className="text-center">
+														<p className="text-2xl font-extrabold text-gray-800">
+															{formatTime(bus.departureTime)}
+														</p>
+														<p className="text-gray-400 text-xs mt-0.5">
+															{bus.origin}
+														</p>
+													</div>
+
+													<div className="flex-1 flex flex-col items-center">
+														<p className="text-xs text-gray-400 mb-1">
+															{tripDuration}
+														</p>
+														<div className="w-full flex items-center gap-1">
+															<div className="w-2 h-2 rounded-full bg-blue-400"></div>
+															<div className="flex-1 h-0.5 bg-gray-200 relative">
+																<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm">
+																	✈️
+																</div>
+															</div>
+															<div className="w-2 h-2 rounded-full bg-blue-600"></div>
+														</div>
+														<p className="text-xs text-gray-400 mt-1">
+															{bus.distance || "Direct"}
+														</p>
+													</div>
+
+													<div className="text-center">
+														<p className="text-2xl font-extrabold text-gray-800">
+															{formatTime(bus.arrivalTime)}
+														</p>
+														<p className="text-gray-400 text-xs mt-0.5">
+															{bus.destination}
+														</p>
+													</div>
+												</div>
+											</div>
+
+											{/* Right — Price & Book */}
+											<div className="flex md:flex-col items-center md:items-end gap-4 md:gap-2 w-full md:w-auto">
+												<div className="text-left md:text-right">
+													<p className="text-2xl font-extrabold text-blue-600">
+														LKR {bus.fare}
+													</p>
+													<p className="text-gray-400 text-xs">per seat</p>
+												</div>
+												<Button
+													onClick={() =>
+														router.push(`/booking/${bus.scheduleId}`)
+													}
+													className="rounded-full px-6 group-hover:bg-blue-700 transition"
+												>
+													Select Seats →
+												</Button>
+											</div>
+										</div>
+									</CardContent>
+								</Card>
+							);
+						})}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+export default function BusSearchPage() {
 	return (
 		<div className="min-h-screen bg-gray-50">
 			{/* Navbar */}
-			<nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-				<Link href="/" className="text-2xl font-bold text-blue-600">
-					HighwayLink
+			<nav className="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+				<Link href="/" className="flex items-center gap-2">
+					<span className="text-2xl">🚌</span>
+					<span className="text-xl font-bold text-blue-600">HighwayLink</span>
 				</Link>
-				<div className="flex gap-4">
-					<Link
-						href="/login"
-						className="text-blue-600 border border-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition"
-					>
-						Login
+				<div className="flex gap-3">
+					<Link href="/login">
+						<Button variant="outline" size="sm" className="rounded-full">
+							Login
+						</Button>
 					</Link>
-					<Link
-						href="/register"
-						className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-					>
-						Register
+					<Link href="/register">
+						<Button size="sm" className="rounded-full">
+							Register
+						</Button>
 					</Link>
 				</div>
 			</nav>
-
-			<div className="max-w-4xl mx-auto px-6 py-10">
-				{/* Search Summary */}
-				<div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-center justify-between">
-					<div>
-						<span className="text-gray-500 text-sm">Searching buses from</span>
-						<h2 className="text-lg font-bold text-gray-800">
-							{origin} → {destination}
-						</h2>
-						<span className="text-gray-500 text-sm">{date}</span>
-					</div>
-					<button
-						onClick={() => router.push("/")}
-						className="text-blue-600 border border-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition text-sm"
-					>
-						Change Search
-					</button>
-				</div>
-
-				{/* Results */}
-				{loading && (
+			<Suspense
+				fallback={
 					<div className="text-center py-20 text-gray-500">
-						Searching for available buses...
+						<div className="text-4xl mb-3 animate-pulse">🚌</div>
+						Loading...
 					</div>
-				)}
-
-				{error && <div className="text-center py-20 text-red-500">{error}</div>}
-
-				{!loading && !error && results.length === 0 && (
-					<div className="text-center py-20">
-						<div className="text-5xl mb-4">🚌</div>
-						<h3 className="text-xl font-semibold text-gray-700 mb-2">
-							No buses found
-						</h3>
-						<p className="text-gray-500">
-							No buses available for this route on the selected date.
-						</p>
-					</div>
-				)}
-
-				{!loading && results.length > 0 && (
-					<div className="space-y-4">
-						<p className="text-gray-600 text-sm">
-							{results.length} bus(es) found
-						</p>
-						{results.map((bus) => (
-							<div
-								key={bus.scheduleId}
-								className="bg-white rounded-xl shadow-sm p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-							>
-								<div className="flex-1">
-									<div className="flex items-center gap-3 mb-2">
-										<span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded">
-											{bus.busType}
-										</span>
-										<span className="text-gray-500 text-sm">
-											{bus.licensePlate}
-										</span>
-									</div>
-									<div className="flex items-center gap-4">
-										<div>
-											<p className="text-2xl font-bold text-gray-800">
-												{formatTime(bus.departureTime)}
-											</p>
-											<p className="text-gray-500 text-sm">{bus.origin}</p>
-										</div>
-										<div className="text-gray-400 flex-1 text-center">
-											<p className="text-xs text-gray-400">{bus.duration}</p>
-											<div className="border-t border-gray-300 my-1"></div>
-											<p className="text-xs text-gray-400">{bus.distance}</p>
-										</div>
-										<div>
-											<p className="text-2xl font-bold text-gray-800">
-												{formatTime(bus.arrivalTime)}
-											</p>
-											<p className="text-gray-500 text-sm">{bus.destination}</p>
-										</div>
-									</div>
-								</div>
-
-								<div className="text-center md:text-right">
-									<p className="text-2xl font-bold text-blue-600 mb-1">
-										LKR {bus.fare}
-									</p>
-									<p className="text-gray-500 text-sm mb-3">
-										{bus.totalSeats} seats total
-									</p>
-									<button
-										onClick={() => router.push(`/booking/${bus.scheduleId}`)}
-										className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-semibold"
-									>
-										Select Seats
-									</button>
-								</div>
-							</div>
-						))}
-					</div>
-				)}
-			</div>
+				}
+			>
+				<BusSearchResults />
+			</Suspense>
 		</div>
 	);
 }

@@ -17,7 +17,7 @@ export const roleEnum = pgEnum("role", [
 	"admin",
 ]);
 export const busTypeEnum = pgEnum("bus_type", ["AC", "non_AC", "luxury"]);
-export const seatTypeEnum = pgEnum("seat_type", ["window", "aisle"]);
+export const seatTypeEnum = pgEnum("seat_type", ["window", "aisle", "middle"]);
 export const seatStatusEnum = pgEnum("seat_status", ["available", "booked"]);
 export const bookingStatusEnum = pgEnum("booking_status", [
 	"pending",
