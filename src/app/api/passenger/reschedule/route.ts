@@ -46,11 +46,24 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
-		// Check if departure is at least 2 hours away
-		const departureTime = new Date(newSchedule[0].departureTime);
+		// Get the ORIGINAL booking's schedule departure time
+		const originalSchedule = await db
+			.select()
+			.from(schedules)
+			.where(eq(schedules.id, booking.scheduleId));
+
+		if (originalSchedule.length === 0) {
+			return NextResponse.json(
+				{ error: "Original schedule not found" },
+				{ status: 404 }
+			);
+		}
+
+		// Check if original departure is at least 2 hours away
+		const originalDepartureTime = new Date(originalSchedule[0].departureTime);
 		const now = new Date();
 		const hoursUntilDeparture =
-			(departureTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+			(originalDepartureTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
 		if (hoursUntilDeparture < 2) {
 			return NextResponse.json(
