@@ -98,7 +98,7 @@ export default function MileagePage() {
 				</Button>
 			</div>
 
-			<div className="max-w-4xl mx-auto px-6 py-10">
+			<div className="max-w-8xl mx-auto px-6 py-10">
 				<div className="mb-8">
 					<h1 className="text-2xl font-bold text-gray-800">Mileage Tracking</h1>
 					<p className="text-gray-500 text-sm">

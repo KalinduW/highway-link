@@ -237,3 +237,18 @@ export const timeLogs = pgTable("time_logs", {
 	notes: text("notes"),
 	createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Invite link table
+export const inviteLinks = pgTable("invite_links", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	token: text("token").notNull().unique(),
+	role: roleEnum("role").notNull(),
+	station: text("station"),
+	createdBy: uuid("created_by")
+		.references(() => users.id)
+		.notNull(),
+	usedBy: uuid("used_by").references(() => users.id),
+	isUsed: integer("is_used").notNull().default(0),
+	expiresAt: timestamp("expires_at").notNull(),
+	createdAt: timestamp("created_at").defaultNow(),
+});

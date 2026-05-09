@@ -39,8 +39,10 @@ export default function LoginPage() {
 				localStorage.setItem("userName", data.user.fullName);
 
 				const role = data.user.role;
-				if (role === "admin" || role === "bus_owner") {
+				if (role === "admin") {
 					router.push("/dashboard/admin");
+				} else if (role === "bus_owner") {
+					router.push("/dashboard/busowner");
 				} else if (role === "conductor") {
 					router.push("/dashboard/conductor");
 				} else if (role === "driver") {
