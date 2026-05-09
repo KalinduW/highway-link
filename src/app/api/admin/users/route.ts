@@ -29,7 +29,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
 	try {
-		const { userId, role } = await req.json();
+		const { userId, role, station } = await req.json();
 
 		if (!userId || !role) {
 			return NextResponse.json(
@@ -40,7 +40,10 @@ export async function PATCH(req: NextRequest) {
 
 		const updatedUser = await db
 			.update(users)
-			.set({ role })
+			.set({
+				role,
+				...(station ? { station } : {}),
+			})
 			.where(eq(users.id, userId))
 			.returning();
 

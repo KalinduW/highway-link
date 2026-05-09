@@ -8,7 +8,7 @@ import {
 	users,
 	payments,
 } from "@/db/schema";
-import { eq, count, sql } from "drizzle-orm";
+import { eq, count, sql, and } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
 	try {
@@ -77,6 +77,53 @@ export async function GET(req: NextRequest) {
 			.where(eq(bookings.bookingStatus, "confirmed"))
 			.groupBy(routes.origin, routes.destination, schedules.fare);
 
+		// Passengers only
+		const totalPassengers = await db
+			.select({ count: count() })
+			.from(users)
+			.where(eq(users.role, "passenger"));
+
+		// Newly joined this week
+		const oneWeekAgo = new Date();
+		oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+		const newThisWeek = await db
+			.select({ count: count() })
+			.from(users)
+			.where(
+				and(
+					eq(users.role, "passenger"),
+					sql`${users.createdAt} >= ${oneWeekAgo}`
+				)
+			);
+
+		// Newly joined this month
+		const oneMonthAgo = new Date();
+		oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+		const newThisMonth = await db
+			.select({ count: count() })
+			.from(users)
+			.where(
+				and(
+					eq(users.role, "passenger"),
+					sql`${users.createdAt} >= ${oneMonthAgo}`
+				)
+			);
+
+		// Recently joined passengers
+		const recentPassengers = await db
+			.select({
+				id: users.id,
+				fullName: users.fullName,
+				email: users.email,
+				phone: users.phone,
+				createdAt: users.createdAt,
+			})
+			.from(users)
+			.where(eq(users.role, "passenger"))
+			.limit(10);
+
 		return NextResponse.json({
 			stats: {
 				totalBookings: totalBookings[0].count,
@@ -86,10 +133,14 @@ export async function GET(req: NextRequest) {
 				totalRoutes: totalRoutes[0].count,
 				totalUsers: totalUsers[0].count,
 				totalSchedules: totalSchedules[0].count,
+				totalPassengers: totalPassengers[0].count,
+				newThisWeek: newThisWeek[0].count,
+				newThisMonth: newThisMonth[0].count,
 			},
 			bookingsPerRoute,
 			bookingsPerBus,
 			revenuePerRoute,
+			recentPassengers,
 		});
 	} catch (error) {
 		console.error("Reports error:", error);

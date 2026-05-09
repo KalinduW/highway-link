@@ -45,6 +45,8 @@ export default function LoginPage() {
 					router.push("/dashboard/conductor");
 				} else if (role === "driver") {
 					router.push("/dashboard/driver");
+				} else if (role === "timekeeper") {
+					router.push("/dashboard/timekeeper");
 				} else {
 					router.push("/dashboard/passenger");
 				}

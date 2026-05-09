@@ -708,11 +708,20 @@ function UsersTab() {
 	};
 
 	const handleRoleChange = async (userId: string, newRole: string) => {
+		let station = "";
+		if (newRole === "timekeeper") {
+			station =
+				prompt("Enter station name for this timekeeper (e.g. Colombo):") || "";
+			if (!station) {
+				setMessage("Station name is required for timekeepers");
+				return;
+			}
+		}
 		try {
 			const res = await fetch("/api/admin/users", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ userId, role: newRole }),
+				body: JSON.stringify({ userId, role: newRole, station }),
 			});
 			if (res.ok) {
 				setMessage("Role updated successfully!");
@@ -747,6 +756,7 @@ function UsersTab() {
 			conductor: "bg-blue-100 text-blue-700",
 			driver: "bg-yellow-100 text-yellow-700",
 			passenger: "bg-green-100 text-green-700",
+			timekeeper: "bg-orange-100 text-orange-700",
 		};
 		return config[role] || "bg-gray-100 text-gray-700";
 	};
@@ -784,8 +794,7 @@ function UsersTab() {
 
 			{/* Role Stats */}
 			<div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-				{["passenger", "conductor", "driver", "bus_owner", "admin"].map(
-					(role) => (
+				{['conductor', 'driver', 'bus_owner', 'admin', 'timekeeper'].map((role) => (
 						<div
 							key={role}
 							className="bg-white rounded-xl border border-gray-100 p-3 text-center shadow-sm"
@@ -912,6 +921,7 @@ function UsersTab() {
 												<option value="driver">Driver</option>
 												<option value="bus_owner">Bus Owner</option>
 												<option value="admin">Admin</option>
+												<option value="timekeeper">Timekeeper</option>
 											</select>
 											<button
 												onClick={() => handleDeactivate(user.id)}

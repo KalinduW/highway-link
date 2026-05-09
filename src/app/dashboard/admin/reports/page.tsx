@@ -15,6 +15,9 @@ interface Stats {
 	totalRoutes: number;
 	totalUsers: number;
 	totalSchedules: number;
+	totalPassengers: number;
+	newThisWeek: number;
+	newThisMonth: number;
 }
 
 interface RouteBooking {
@@ -36,6 +39,14 @@ interface RevenueRoute {
 	bookingCount: number;
 }
 
+interface RecentPassenger {
+	id: string;
+	fullName: string;
+	email: string;
+	phone: string;
+	createdAt: string;
+}
+
 export default function ReportsPage() {
 	const router = useRouter();
 	const [stats, setStats] = useState<Stats | null>(null);
@@ -54,6 +65,7 @@ export default function ReportsPage() {
 					setBookingsPerRoute(data.bookingsPerRoute);
 					setBookingsPerBus(data.bookingsPerBus);
 					setRevenuePerRoute(data.revenuePerRoute);
+					setRecentPassengers(data.recentPassengers || []);
 				}
 			} catch {
 				console.error("Failed to load reports");
@@ -71,6 +83,10 @@ export default function ReportsPage() {
 	const totalRevenue = revenuePerRoute.reduce((acc, r) => {
 		return acc + parseFloat(r.fare) * r.bookingCount;
 	}, 0);
+
+	const [recentPassengers, setRecentPassengers] = useState<RecentPassenger[]>(
+		[]
+	);
 
 	return (
 		<div className="bg-gray-50 min-h-screen">
@@ -121,7 +137,6 @@ export default function ReportsPage() {
 									value: stats.cancelledBookings,
 									icon: "❌",
 								},
-								{ label: "Total Users", value: stats.totalUsers, icon: "👥" },
 								{ label: "Total Buses", value: stats.totalBuses, icon: "🚌" },
 								{ label: "Total Routes", value: stats.totalRoutes, icon: "🗺️" },
 								{
@@ -133,6 +148,11 @@ export default function ReportsPage() {
 									label: "Total Revenue",
 									value: `LKR ${totalRevenue.toLocaleString()}`,
 									icon: "💰",
+								},
+								{
+									label: "Total Passengers",
+									value: stats.totalPassengers,
+									icon: "👥",
 								},
 							].map((card) => (
 								<Card key={card.label}>
@@ -287,6 +307,121 @@ export default function ReportsPage() {
 										))}
 									</div>
 								)}
+							</CardContent>
+						</Card>
+
+						{/* Passenger Stats */}
+						<Card className="mb-6 mt-6">
+							<CardHeader>
+								<CardTitle>👥 Passenger Growth</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<div className="grid grid-cols-3 gap-4 mb-6">
+									{[
+										{
+											label: "Total Passengers",
+											value: stats.totalPassengers,
+											icon: "👥",
+											color: "bg-blue-50 text-blue-600",
+										},
+										{
+											label: "New This Week",
+											value: stats.newThisWeek,
+											icon: "📈",
+											color: "bg-green-50 text-green-600",
+										},
+										{
+											label: "New This Month",
+											value: stats.newThisMonth,
+											icon: "🗓️",
+											color: "bg-purple-50 text-purple-600",
+										},
+									].map((card) => (
+										<div
+											key={card.label}
+											className={`rounded-xl p-4 ${card.color}`}
+										>
+											<p className="text-2xl mb-1">{card.icon}</p>
+											<p className="text-2xl font-extrabold">{card.value}</p>
+											<p className="text-sm opacity-75">{card.label}</p>
+										</div>
+									))}
+								</div>
+
+								{/* Recently Joined */}
+								<p className="font-semibold text-gray-700 mb-3">
+									Recently Joined Passengers
+								</p>
+								<div className="overflow-x-auto">
+									<table className="w-full text-sm">
+										<thead className="bg-gray-50 border-b">
+											<tr>
+												<th className="text-left px-4 py-3 text-gray-500 font-semibold text-xs uppercase">
+													Name
+												</th>
+												<th className="text-left px-4 py-3 text-gray-500 font-semibold text-xs uppercase">
+													Email
+												</th>
+												<th className="text-left px-4 py-3 text-gray-500 font-semibold text-xs uppercase">
+													Phone
+												</th>
+												<th className="text-left px-4 py-3 text-gray-500 font-semibold text-xs uppercase">
+													Joined
+												</th>
+											</tr>
+										</thead>
+										<tbody className="divide-y divide-gray-50">
+											{recentPassengers.length === 0 && (
+												<tr>
+													<td
+														colSpan={4}
+														className="text-center py-6 text-gray-400"
+													>
+														No passengers yet
+													</td>
+												</tr>
+											)}
+											{recentPassengers.map((passenger) => (
+												<tr
+													key={passenger.id}
+													className="hover:bg-gray-50 transition"
+												>
+													<td className="px-4 py-3">
+														<div className="flex items-center gap-3">
+															<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xs">
+																{passenger.fullName
+																	.split(" ")
+																	.map((n: string) => n[0])
+																	.join("")
+																	.slice(0, 2)
+																	.toUpperCase()}
+															</div>
+															<p className="font-medium text-gray-800">
+																{passenger.fullName}
+															</p>
+														</div>
+													</td>
+													<td className="px-4 py-3 text-gray-600">
+														{passenger.email}
+													</td>
+													<td className="px-4 py-3 text-gray-600">
+														{passenger.phone}
+													</td>
+													<td className="px-4 py-3 text-gray-400 text-xs">
+														{new Date(passenger.createdAt).toLocaleDateString(
+															"en-US",
+															{
+																year: "numeric",
+																month: "short",
+																day: "numeric",
+															}
+														)}
+													</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
 							</CardContent>
 						</Card>
 					</>

@@ -54,6 +54,12 @@ function AdminSidebar() {
 			path: "/dashboard/admin/reports",
 		},
 		{
+			id: "timelogs",
+			label: "Time Logs",
+			icon: "⏱️",
+			path: "/dashboard/admin/timelogs",
+		},
+		{
 			id: "mileage",
 			label: "Mileage",
 			icon: "🛣️",
@@ -71,6 +77,7 @@ function AdminSidebar() {
 		if (item.id === "reports") return pathname === "/dashboard/admin/reports";
 		if (item.id === "mileage") return pathname === "/dashboard/admin/mileage";
 		if (item.id === 'lostfound') return pathname === '/dashboard/admin/lostfound';
+		if (item.id === "timelogs") return pathname === "/dashboard/admin/timelogs";
 		return pathname === "/dashboard/admin" && activeTab === item.id;
 	};
 

@@ -15,6 +15,7 @@ export const roleEnum = pgEnum("role", [
 	"driver",
 	"bus_owner",
 	"admin",
+	"timekeeper",
 ]);
 export const busTypeEnum = pgEnum("bus_type", ["AC", "non_AC", "luxury"]);
 export const seatTypeEnum = pgEnum("seat_type", ["window", "aisle", "middle"]);
@@ -47,6 +48,15 @@ export const lostFoundStatusEnum = pgEnum("lost_found_status", [
 	"found",
 	"claimed",
 ]);
+export const timeLogTypeEnum = pgEnum("time_log_type", [
+	"departure",
+	"arrival",
+]);
+export const timeLogStatusEnum = pgEnum("time_log_status", [
+	"on_time",
+	"late",
+	"very_late",
+]);
 
 // Users table
 export const users = pgTable("users", {
@@ -57,6 +67,9 @@ export const users = pgTable("users", {
 	phone: text("phone").notNull(),
 	passwordHash: text("password_hash").notNull(),
 	role: roleEnum("role").notNull().default("passenger"),
+	points: integer("points").notNull().default(0),
+	freeTicketCredits: integer("free_ticket_credits").notNull().default(0),
+	station: text("station"),
 	createdAt: timestamp("created_at").defaultNow(),
 	updatedAt: timestamp("updated_at").defaultNow(),
 	deletedAt: timestamp("deleted_at"),
@@ -192,4 +205,35 @@ export const notifications = pgTable("notifications", {
 	channel: text("channel").notNull(),
 	sentAt: timestamp("sent_at").defaultNow(),
 	status: text("status").notNull().default("sent"),
+});
+
+export const passengerNotifications = pgTable("passenger_notifications", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	userId: uuid("user_id")
+		.references(() => users.id)
+		.notNull(),
+	title: text("title").notNull(),
+	message: text("message").notNull(),
+	type: text("type").notNull().default("info"),
+	isRead: integer("is_read").notNull().default(0),
+	createdAt: timestamp("created_at").defaultNow(),
+});
+
+// timelogs table
+export const timeLogs = pgTable("time_logs", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	scheduleId: uuid("schedule_id")
+		.references(() => schedules.id)
+		.notNull(),
+	timekeeperId: uuid("timekeeper_id")
+		.references(() => users.id)
+		.notNull(),
+	station: text("station").notNull(),
+	type: timeLogTypeEnum("type").notNull(),
+	scheduledTime: timestamp("scheduled_time").notNull(),
+	actualTime: timestamp("actual_time").notNull(),
+	minutesLate: integer("minutes_late").notNull().default(0),
+	status: timeLogStatusEnum("status").notNull().default("on_time"),
+	notes: text("notes"),
+	createdAt: timestamp("created_at").defaultNow(),
 });
