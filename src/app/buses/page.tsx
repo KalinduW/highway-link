@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense } from "react";
-import { useEffect, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import LocationInput from "@/components/LocationInput";
+import { useAuth } from "@/lib/auth";
+import LoginModal from "@/components/LoginModal";
 
 interface BusResult {
 	scheduleId: string;
@@ -22,9 +22,74 @@ interface BusResult {
 	duration: string;
 }
 
+function NavBar() {
+	const { user, isLoggedIn, logout } = useAuth();
+	const router = useRouter();
+
+	const handleLogout = () => {
+		logout();
+		router.push("/");
+	};
+
+	return (
+		<nav className="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+			<Link href="/" className="flex items-center gap-2">
+				<span className="text-2xl">🚌</span>
+				<span className="text-xl font-bold text-blue-600">HighwayLink</span>
+			</Link>
+			<div className="flex items-center gap-3">
+				{isLoggedIn ? (
+					<>
+						<div className="hidden md:flex items-center gap-2">
+							<div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+								{user?.name
+									.split(" ")
+									.map((n: string) => n[0])
+									.join("")
+									.slice(0, 2)
+									.toUpperCase()}
+							</div>
+							<span className="text-sm font-medium text-gray-700">
+								{user?.name}
+							</span>
+						</div>
+						<Link href="/dashboard/passenger">
+							<Button variant="outline" size="sm" className="rounded-full">
+								My Bookings
+							</Button>
+						</Link>
+						<Button
+							variant="outline"
+							size="sm"
+							className="rounded-full text-red-500 border-red-200 hover:bg-red-50"
+							onClick={handleLogout}
+						>
+							Logout
+						</Button>
+					</>
+				) : (
+					<>
+						<Link href="/login">
+							<Button variant="outline" size="sm" className="rounded-full">
+								Login
+							</Button>
+						</Link>
+						<Link href="/register">
+							<Button size="sm" className="rounded-full">
+								Register
+							</Button>
+						</Link>
+					</>
+				)}
+			</div>
+		</nav>
+	);
+}
+
 function BusSearchResults() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
+	const { isLoggedIn } = useAuth();
 	const origin = searchParams.get("origin") || "";
 	const destination = searchParams.get("destination") || "";
 	const date = searchParams.get("date") || "";
@@ -33,6 +98,10 @@ function BusSearchResults() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 	const [sortBy, setSortBy] = useState("departure");
+	const [showLoginModal, setShowLoginModal] = useState(false);
+	const [pendingScheduleId, setPendingScheduleId] = useState<string | null>(
+		null
+	);
 
 	useEffect(() => {
 		const fetchBuses = async () => {
@@ -97,6 +166,15 @@ function BusSearchResults() {
 			);
 		return 0;
 	});
+
+	const handleSelectSeat = (scheduleId: string) => {
+		if (!isLoggedIn) {
+			setPendingScheduleId(scheduleId);
+			setShowLoginModal(true);
+		} else {
+			router.push(`/booking/${scheduleId}`);
+		}
+	};
 
 	return (
 		<div className="max-w-4xl mx-auto px-6 py-8">
@@ -176,15 +254,13 @@ function BusSearchResults() {
 						</strong>{" "}
 						on this date.
 					</p>
-					<div className="flex justify-center gap-3">
-						<Button
-							variant="outline"
-							className="rounded-full"
-							onClick={() => router.push("/")}
-						>
-							Change Route
-						</Button>
-					</div>
+					<Button
+						variant="outline"
+						className="rounded-full"
+						onClick={() => router.push("/")}
+					>
+						Change Route
+					</Button>
 				</div>
 			)}
 
@@ -300,9 +376,7 @@ function BusSearchResults() {
 													<p className="text-gray-400 text-xs">per seat</p>
 												</div>
 												<Button
-													onClick={() =>
-														router.push(`/booking/${bus.scheduleId}`)
-													}
+													onClick={() => handleSelectSeat(bus.scheduleId)}
 													className="rounded-full px-6 group-hover:bg-blue-700 transition"
 												>
 													Select Seats →
@@ -316,6 +390,16 @@ function BusSearchResults() {
 					</div>
 				</div>
 			)}
+
+			{/* Login Modal */}
+			<LoginModal
+				isOpen={showLoginModal}
+				onClose={() => setShowLoginModal(false)}
+				redirectTo={
+					pendingScheduleId ? `/booking/${pendingScheduleId}` : undefined
+				}
+				message="Please login to book a seat on this bus"
+			/>
 		</div>
 	);
 }
@@ -323,25 +407,7 @@ function BusSearchResults() {
 export default function BusSearchPage() {
 	return (
 		<div className="min-h-screen bg-gray-50">
-			{/* Navbar */}
-			<nav className="bg-white border-b px-8 py-4 flex justify-between items-center sticky top-0 z-50">
-				<Link href="/" className="flex items-center gap-2">
-					<span className="text-2xl">🚌</span>
-					<span className="text-xl font-bold text-blue-600">HighwayLink</span>
-				</Link>
-				<div className="flex gap-3">
-					<Link href="/login">
-						<Button variant="outline" size="sm" className="rounded-full">
-							Login
-						</Button>
-					</Link>
-					<Link href="/register">
-						<Button size="sm" className="rounded-full">
-							Register
-						</Button>
-					</Link>
-				</div>
-			</nav>
+			<NavBar />
 			<Suspense
 				fallback={
 					<div className="text-center py-20 text-gray-500">

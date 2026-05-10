@@ -7,9 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function RegisterPage() {
+function RegisterContent() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const redirect = searchParams.get("redirect");
 	const [formData, setFormData] = useState({
 		fullName: "",
 		nic: "",
@@ -60,7 +64,9 @@ export default function RegisterPage() {
 			if (!res.ok) {
 				setError(data.error || "Registration failed");
 			} else {
-				router.push("/login");
+				router.push(
+					`/login${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}`
+				);
 			}
 		} catch {
 			setError("Something went wrong. Please try again.");
@@ -248,5 +254,19 @@ export default function RegisterPage() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function RegisterPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+					Loading...
+				</div>
+			}
+		>
+			<RegisterContent />
+		</Suspense>
 	);
 }

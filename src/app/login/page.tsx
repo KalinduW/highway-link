@@ -7,9 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 export default function LoginPage() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const redirect = searchParams.get("redirect");
 	const [formData, setFormData] = useState({ email: "", password: "" });
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -37,9 +41,12 @@ export default function LoginPage() {
 			} else {
 				localStorage.setItem("userEmail", data.user.email);
 				localStorage.setItem("userName", data.user.fullName);
+				localStorage.setItem("userRole", data.user.role);
 
 				const role = data.user.role;
-				if (role === "admin") {
+				if (redirect) {
+					router.push(decodeURIComponent(redirect));
+				} else if (role === "admin") {
 					router.push("/dashboard/admin");
 				} else if (role === "bus_owner") {
 					router.push("/dashboard/busowner");
