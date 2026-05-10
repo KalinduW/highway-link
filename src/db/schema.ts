@@ -124,6 +124,11 @@ export const routes = pgTable("routes", {
 });
 
 // Schedule table
+export const scheduleTypeEnum = pgEnum("schedule_type", [
+	"one_time",
+	"recurring",
+]);
+
 export const schedules = pgTable("schedules", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	busId: uuid("bus_id")
@@ -140,6 +145,9 @@ export const schedules = pgTable("schedules", {
 	arrivalTime: timestamp("arrival_time").notNull(),
 	fare: text("fare").notNull(),
 	status: scheduleStatusEnum("status").notNull().default("scheduled"),
+	scheduleType: scheduleTypeEnum("schedule_type").notNull().default("one_time"),
+	recurringEndDate: timestamp("recurring_end_date"),
+	isPaused: integer("is_paused").notNull().default(0),
 	createdAt: timestamp("created_at").defaultNow(),
 	updatedAt: timestamp("updated_at").defaultNow(),
 });

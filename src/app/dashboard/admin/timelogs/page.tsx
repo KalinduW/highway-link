@@ -88,6 +88,9 @@ export default function AdminTimeLogsPage() {
 
 	const lateCount = logs.filter((l) => l.minutesLate >= 10).length;
 	const onTimeCount = logs.filter((l) => l.minutesLate < 5).length;
+	const warningCount = logs.filter(
+		(l) => l.minutesLate >= 5 && l.minutesLate < 10
+	).length;
 
 	return (
 		<div>
@@ -121,16 +124,16 @@ export default function AdminTimeLogsPage() {
 							color: "bg-green-50 text-green-600",
 						},
 						{
+							label: "Minor Delay (5-9 mins)",
+							value: warningCount,
+							icon: "🔴",
+							color: "bg-orange-50 text-orange-600",
+						},
+						{
 							label: "Late (10+ mins)",
 							value: lateCount,
 							icon: "⚠️",
 							color: "bg-red-50 text-red-600",
-						},
-						{
-							label: "Departures",
-							value: logs.filter((l) => l.type === "departure").length,
-							icon: "🛫",
-							color: "bg-orange-50 text-orange-600",
 						},
 					].map((card) => (
 						<Card key={card.label} className="border-0 shadow-sm">
@@ -149,6 +152,35 @@ export default function AdminTimeLogsPage() {
 					))}
 				</div>
 
+				{/* On Time Rate */}
+				<Card className="border-0 shadow-sm mb-8">
+					<CardContent className="p-6">
+						<div className="flex justify-between items-center mb-3">
+							<p className="font-bold text-gray-800">Overall On-Time Rate</p>
+							<p className="text-2xl font-extrabold text-green-600">
+								{logs.length > 0
+									? `${Math.round((onTimeCount / logs.length) * 100)}%`
+									: "0%"}
+							</p>
+						</div>
+						<div className="bg-gray-100 rounded-full h-3">
+							<div
+								className="bg-green-500 h-3 rounded-full transition-all"
+								style={{
+									width:
+										logs.length > 0
+											? `${(onTimeCount / logs.length) * 100}%`
+											: "0%",
+								}}
+							/>
+						</div>
+						<div className="flex justify-between text-xs text-gray-400 mt-2">
+							<span>0%</span>
+							<span>100%</span>
+						</div>
+					</CardContent>
+				</Card>
+
 				{/* Search & Filter */}
 				<div className="flex gap-4 mb-6 flex-wrap">
 					<Input
@@ -163,8 +195,8 @@ export default function AdminTimeLogsPage() {
 						className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 					>
 						<option value="all">All Types</option>
-						<option value="departure">Departures</option>
-						<option value="arrival">Arrivals</option>
+						<option value="departure">🛫 Departures</option>
+						<option value="arrival">🛬 Arrivals</option>
 					</select>
 					<select
 						value={filterStatus}
@@ -172,8 +204,8 @@ export default function AdminTimeLogsPage() {
 						className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 					>
 						<option value="all">All Status</option>
-						<option value="on_time">On Time</option>
-						<option value="late">Late</option>
+						<option value="on_time">✅ On Time</option>
+						<option value="late">⚠️ Late</option>
 					</select>
 				</div>
 
@@ -219,8 +251,15 @@ export default function AdminTimeLogsPage() {
 								)}
 								{!loading && filteredLogs.length === 0 && (
 									<tr>
-										<td colSpan={8} className="text-center py-10 text-gray-400">
-											No time logs found
+										<td colSpan={8} className="text-center py-16 text-gray-400">
+											<div className="flex flex-col items-center gap-2">
+												<span className="text-4xl">⏱️</span>
+												<p className="font-medium">No time logs found</p>
+												<p className="text-xs">
+													Timekeepers haven't marked any departures or arrivals
+													yet
+												</p>
+											</div>
 										</td>
 									</tr>
 								)}
@@ -228,7 +267,11 @@ export default function AdminTimeLogsPage() {
 									<tr
 										key={log.id}
 										className={`hover:bg-gray-50 transition ${
-											log.minutesLate >= 5 ? "bg-red-50" : ""
+											log.minutesLate >= 10
+												? "bg-red-50"
+												: log.minutesLate >= 5
+												? "bg-orange-50"
+												: ""
 										}`}
 									>
 										<td className="px-6 py-4">

@@ -552,44 +552,185 @@ function RoutesTab() {
 }
 
 function SchedulesTab() {
+	const [buses, setBuses] = useState<any[]>([]);
+	const [routes, setRoutes] = useState<any[]>([]);
+	const [existingSchedules, setExistingSchedules] = useState<any[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [message, setMessage] = useState("");
+	const [error, setError] = useState("");
+	const [submitting, setSubmitting] = useState(false);
 	const [form, setForm] = useState({
 		busId: "",
 		routeId: "",
+		departureDate: "",
 		departureTime: "",
 		arrivalTime: "",
 		fare: "",
+		scheduleType: "one_time",
+		recurringEndDate: "",
 	});
-	const [message, setMessage] = useState("");
-	const [loading, setLoading] = useState(false);
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		setLoading(true);
-		setMessage("");
+	useEffect(() => {
+		fetchData();
+	}, []);
+
+	const fetchData = async () => {
 		try {
-			const res = await fetch("/api/admin/schedules", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(form),
-			});
-			const data = await res.json();
-			if (!res.ok) {
-				setMessage(data.error || "Failed to add schedule");
-			} else {
-				setMessage("Schedule added successfully!");
-				setForm({
-					busId: "",
-					routeId: "",
-					departureTime: "",
-					arrivalTime: "",
-					fare: "",
-				});
-			}
+			const [busRes, routeRes, scheduleRes] = await Promise.all([
+				fetch("/api/admin/buses/list"),
+				fetch("/api/admin/routes/list"),
+				fetch("/api/admin/schedules"),
+			]);
+			const busData = await busRes.json();
+			const routeData = await routeRes.json();
+			const scheduleData = await scheduleRes.json();
+			if (busRes.ok) setBuses(busData.buses);
+			if (routeRes.ok) setRoutes(routeData.routes);
+			if (scheduleRes.ok) setExistingSchedules(scheduleData.schedules);
 		} catch {
-			setMessage("Something went wrong");
+			console.error("Failed to fetch data");
 		} finally {
 			setLoading(false);
 		}
+	};
+
+	// Auto-suggest arrival time based on route duration
+	const handleRouteChange = (routeId: string) => {
+		setForm({ ...form, routeId });
+		if (form.departureDate && form.departureTime) {
+			autoSuggestArrival(routeId, form.departureDate, form.departureTime);
+		}
+	};
+
+	const handleDepartureChange = (field: string, value: string) => {
+		const newForm = { ...form, [field]: value };
+		setForm(newForm);
+
+		if (form.routeId && newForm.departureDate && newForm.departureTime) {
+			autoSuggestArrival(
+				form.routeId,
+				newForm.departureDate,
+				newForm.departureTime
+			);
+		}
+	};
+
+	const autoSuggestArrival = (routeId: string, date: string, time: string) => {
+		const selectedRoute = routes.find((r) => r.id === routeId);
+		if (!selectedRoute?.duration) return;
+
+		// Parse duration (e.g. "2.5 hrs" or "2 hours 30 mins")
+		const durationMatch = selectedRoute.duration.match(/(\d+\.?\d*)/);
+		if (!durationMatch) return;
+
+		const durationHours = parseFloat(durationMatch[1]);
+		const departure = new Date(`${date}T${time}`);
+		const arrival = new Date(
+			departure.getTime() + durationHours * 60 * 60 * 1000
+		);
+
+		const arrivalHours = arrival.getHours().toString().padStart(2, "0");
+		const arrivalMins = arrival.getMinutes().toString().padStart(2, "0");
+
+		setForm((prev) => ({
+			...prev,
+			arrivalTime: `${arrivalHours}:${arrivalMins}`,
+		}));
+	};
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setSubmitting(true);
+		setMessage("");
+		setError("");
+
+		try {
+			const departureDateTime = `${form.departureDate}T${form.departureTime}:00`;
+			const arrivalDateTime = `${form.departureDate}T${form.arrivalTime}:00`;
+
+			const res = await fetch("/api/admin/schedules", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					busId: form.busId,
+					routeId: form.routeId,
+					departureTime: departureDateTime,
+					arrivalTime: arrivalDateTime,
+					fare: form.fare,
+					scheduleType: form.scheduleType,
+					recurringEndDate: form.recurringEndDate || null,
+				}),
+			});
+
+			const data = await res.json();
+			if (!res.ok) {
+				setError(data.error || "Failed to add schedule");
+			} else {
+				setMessage(
+					form.scheduleType === "recurring"
+						? "Recurring schedule added! Passengers can now book for any date."
+						: "Schedule added successfully!"
+				);
+				setForm({
+					busId: "",
+					routeId: "",
+					departureDate: "",
+					departureTime: "",
+					arrivalTime: "",
+					fare: "",
+					scheduleType: "one_time",
+					recurringEndDate: "",
+				});
+				fetchData();
+			}
+		} catch {
+			setError("Something went wrong");
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	const handlePause = async (scheduleId: string, isPaused: boolean) => {
+		try {
+			const res = await fetch("/api/admin/schedules", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ scheduleId, isPaused: !isPaused }),
+			});
+			if (res.ok) {
+				setMessage(isPaused ? "Schedule resumed!" : "Schedule paused!");
+				fetchData();
+				setTimeout(() => setMessage(""), 3000);
+			}
+		} catch {
+			setError("Failed to update schedule");
+		}
+	};
+
+	const handleDelete = async (scheduleId: string) => {
+		if (!confirm("Are you sure you want to delete this schedule?")) return;
+		try {
+			const res = await fetch(`/api/admin/schedules?scheduleId=${scheduleId}`, {
+				method: "DELETE",
+			});
+			if (res.ok) {
+				setMessage("Schedule deleted successfully!");
+				fetchData();
+				setTimeout(() => setMessage(""), 3000);
+			}
+		} catch {
+			setError("Failed to delete schedule");
+		}
+	};
+
+	const selectedRoute = routes.find((r) => r.id === form.routeId);
+	const selectedBus = buses.find((b) => b.id === form.busId);
+
+	const formatTime = (dateStr: string) => {
+		return new Date(dateStr).toLocaleTimeString("en-US", {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
 	};
 
 	return (
@@ -599,87 +740,304 @@ function SchedulesTab() {
 					Manage Schedules
 				</h2>
 				<p className="text-gray-500 text-sm">
-					Create trip schedules by linking buses to routes
+					Create one-time or recurring bus schedules
 				</p>
 			</div>
 
-			<FormCard title="➕ Add New Schedule">
-				{message && (
-					<div
-						className={`p-3 rounded-xl mb-4 text-sm ${
-							message.includes("success")
-								? "bg-green-50 text-green-600 border border-green-200"
-								: "bg-red-50 text-red-600 border border-red-200"
-						}`}
-					>
-						{message}
-					</div>
-				)}
-				<div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-sm text-blue-700">
-					💡 Get the Bus ID and Route ID from pgAdmin → your database tables
+			{message && (
+				<div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-xl mb-6 flex items-center gap-2">
+					<span>✅</span> {message}
 				</div>
-				<form onSubmit={handleSubmit} className="space-y-4">
-					<div>
-						<Label className="mb-1.5 block">Bus ID</Label>
-						<Input
-							value={form.busId}
-							onChange={(e) => setForm({ ...form, busId: e.target.value })}
-							required
-							placeholder="Paste Bus ID from database"
-						/>
-					</div>
-					<div>
-						<Label className="mb-1.5 block">Route ID</Label>
-						<Input
-							value={form.routeId}
-							onChange={(e) => setForm({ ...form, routeId: e.target.value })}
-							required
-							placeholder="Paste Route ID from database"
-						/>
-					</div>
-					<div className="grid grid-cols-2 gap-4">
+			)}
+			{error && (
+				<div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl mb-6 flex items-center gap-2">
+					<span>⚠️</span> {error}
+				</div>
+			)}
+
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+				{/* Add Schedule Form */}
+				<div className="bg-white rounded-2xl shadow-sm border-0 p-6">
+					<h3 className="font-bold text-gray-800 text-lg mb-5">
+						➕ Add New Schedule
+					</h3>
+					<form onSubmit={handleSubmit} className="space-y-4">
+						{/* Bus Dropdown */}
 						<div>
-							<Label className="mb-1.5 block">Departure Time</Label>
-							<Input
-								type="datetime-local"
-								value={form.departureTime}
+							<label className="block text-sm font-medium text-gray-700 mb-1.5">
+								Select Bus
+							</label>
+							<select
+								value={form.busId}
+								onChange={(e) => setForm({ ...form, busId: e.target.value })}
+								required
+								className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							>
+								<option value="">Choose a bus...</option>
+								{buses.map((bus) => (
+									<option key={bus.id} value={bus.id}>
+										🚌 {bus.licensePlate} — {bus.busType} ({bus.totalSeats}{" "}
+										seats)
+									</option>
+								))}
+							</select>
+						</div>
+
+						{/* Route Dropdown */}
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1.5">
+								Select Route
+							</label>
+							<select
+								value={form.routeId}
+								onChange={(e) => handleRouteChange(e.target.value)}
+								required
+								className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+							>
+								<option value="">Choose a route...</option>
+								{routes.map((route) => (
+									<option key={route.id} value={route.id}>
+										🗺️ {route.origin} → {route.destination}
+										{route.distance ? ` (${route.distance})` : ""}
+										{route.duration ? ` — ${route.duration}` : ""}
+									</option>
+								))}
+							</select>
+							{selectedRoute && (
+								<p className="text-blue-600 text-xs mt-1">
+									ℹ️ Duration: {selectedRoute.duration || "N/A"} — arrival time
+									will be auto-suggested
+								</p>
+							)}
+						</div>
+
+						{/* Schedule Type Toggle */}
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1.5">
+								Schedule Type
+							</label>
+							<div className="flex gap-2 bg-gray-100 rounded-xl p-1">
+								{[
+									{ id: "one_time", label: "📅 One-Time" },
+									{ id: "recurring", label: "🔄 Recurring Daily" },
+								].map((type) => (
+									<button
+										key={type.id}
+										type="button"
+										onClick={() => setForm({ ...form, scheduleType: type.id })}
+										className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
+											form.scheduleType === type.id
+												? "bg-white text-blue-600 shadow-sm"
+												: "text-gray-500 hover:text-gray-700"
+										}`}
+									>
+										{type.label}
+									</button>
+								))}
+							</div>
+						</div>
+
+						{/* Date */}
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1.5">
+								{form.scheduleType === "recurring" ? "Start Date" : "Date"}
+							</label>
+							<input
+								type="date"
+								value={form.departureDate}
 								onChange={(e) =>
-									setForm({ ...form, departureTime: e.target.value })
+									handleDepartureChange("departureDate", e.target.value)
 								}
 								required
+								className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 							/>
 						</div>
+
+						{/* Recurring End Date */}
+						{form.scheduleType === "recurring" && (
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1.5">
+									End Date (optional — leave blank for no end)
+								</label>
+								<input
+									type="date"
+									value={form.recurringEndDate}
+									onChange={(e) =>
+										setForm({ ...form, recurringEndDate: e.target.value })
+									}
+									className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+								/>
+							</div>
+						)}
+
+						{/* Times */}
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1.5">
+									Departure Time
+								</label>
+								<input
+									type="time"
+									value={form.departureTime}
+									onChange={(e) =>
+										handleDepartureChange("departureTime", e.target.value)
+									}
+									required
+									className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+								/>
+							</div>
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1.5">
+									Arrival Time
+									{form.arrivalTime && (
+										<span className="text-blue-500 text-xs ml-1">
+											(auto-suggested)
+										</span>
+									)}
+								</label>
+								<input
+									type="time"
+									value={form.arrivalTime}
+									onChange={(e) =>
+										setForm({ ...form, arrivalTime: e.target.value })
+									}
+									required
+									className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+								/>
+							</div>
+						</div>
+
+						{/* Fare */}
 						<div>
-							<Label className="mb-1.5 block">Arrival Time</Label>
-							<Input
-								type="datetime-local"
-								value={form.arrivalTime}
-								onChange={(e) =>
-									setForm({ ...form, arrivalTime: e.target.value })
-								}
+							<label className="block text-sm font-medium text-gray-700 mb-1.5">
+								Fare (LKR)
+							</label>
+							<input
+								type="number"
+								value={form.fare}
+								onChange={(e) => setForm({ ...form, fare: e.target.value })}
 								required
+								placeholder="e.g. 500"
+								className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 							/>
 						</div>
+
+						{/* Summary */}
+						{selectedBus && selectedRoute && form.departureTime && (
+							<div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+								<p className="text-blue-700 text-xs font-semibold mb-2">
+									📋 Schedule Summary
+								</p>
+								<div className="space-y-1 text-xs text-blue-600">
+									<p>
+										🚌 {selectedBus.licensePlate} ({selectedBus.busType})
+									</p>
+									<p>
+										🗺️ {selectedRoute.origin} → {selectedRoute.destination}
+									</p>
+									<p>
+										🕐 Departs {form.departureTime} → Arrives {form.arrivalTime}
+									</p>
+									{form.fare && <p>💰 LKR {form.fare} per seat</p>}
+									<p>
+										{form.scheduleType === "recurring"
+											? `🔄 Recurring daily from ${form.departureDate}${
+													form.recurringEndDate
+														? ` to ${form.recurringEndDate}`
+														: " (no end date)"
+											  }`
+											: `📅 One-time on ${form.departureDate}`}
+									</p>
+								</div>
+							</div>
+						)}
+
+						<button
+							type="submit"
+							disabled={submitting}
+							className="w-full bg-blue-600 text-white py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+						>
+							{submitting ? "Adding..." : "+ Add Schedule"}
+						</button>
+					</form>
+				</div>
+
+				{/* Existing Schedules */}
+				<div>
+					<h3 className="font-bold text-gray-800 text-lg mb-4">
+						Existing Schedules ({existingSchedules.length})
+					</h3>
+					<div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+						{loading && (
+							<p className="text-gray-400 text-sm text-center py-8">
+								Loading schedules...
+							</p>
+						)}
+						{!loading && existingSchedules.length === 0 && (
+							<p className="text-gray-400 text-sm text-center py-8">
+								No schedules added yet
+							</p>
+						)}
+						{existingSchedules.map((schedule) => (
+							<div
+								key={schedule.id}
+								className={`bg-white rounded-xl border p-4 shadow-sm ${
+									schedule.isPaused
+										? "opacity-60 border-gray-200"
+										: "border-gray-100"
+								}`}
+							>
+								<div className="flex justify-between items-start mb-2">
+									<div>
+										<p className="font-bold text-gray-800 text-sm">
+											{schedule.origin} → {schedule.destination}
+										</p>
+										<p className="text-gray-400 text-xs">
+											🚌 {schedule.licensePlate} · {schedule.busType}
+										</p>
+									</div>
+									<div className="flex items-center gap-1">
+										{schedule.scheduleType === "recurring" && (
+											<span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">
+												🔄 Recurring
+											</span>
+										)}
+										{schedule.isPaused === 1 && (
+											<span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">
+												⏸ Paused
+											</span>
+										)}
+									</div>
+								</div>
+								<p className="text-gray-600 text-xs mb-3">
+									🕐 {formatTime(schedule.departureTime)} →{" "}
+									{formatTime(schedule.arrivalTime)} · 💰 LKR {schedule.fare}
+								</p>
+								<div className="flex gap-2">
+									<button
+										onClick={() =>
+											handlePause(schedule.id, schedule.isPaused === 1)
+										}
+										className={`text-xs px-2.5 py-1 rounded-lg font-medium transition border ${
+											schedule.isPaused === 1
+												? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+												: "bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100"
+										}`}
+									>
+										{schedule.isPaused === 1 ? "▶️ Resume" : "⏸ Pause"}
+									</button>
+									<button
+										onClick={() => handleDelete(schedule.id)}
+										className="text-xs bg-red-50 text-red-500 px-2.5 py-1 rounded-lg hover:bg-red-100 transition font-medium border border-red-200"
+									>
+										🗑️ Delete
+									</button>
+								</div>
+							</div>
+						))}
 					</div>
-					<div>
-						<Label className="mb-1.5 block">Fare (LKR)</Label>
-						<Input
-							type="number"
-							value={form.fare}
-							onChange={(e) => setForm({ ...form, fare: e.target.value })}
-							required
-							placeholder="e.g. 500"
-						/>
-					</div>
-					<Button
-						type="submit"
-						disabled={loading}
-						className="w-full rounded-xl"
-					>
-						{loading ? "Adding..." : "+ Add Schedule"}
-					</Button>
-				</form>
-			</FormCard>
+				</div>
+			</div>
 		</div>
 	);
 }
